@@ -233,21 +233,26 @@ const proxyEndpoints = {
     path: '/api/v1/prediction/:identifier',
     target: '/api/v1/prediction',
   },
-  config: {
-    method: 'GET',
-    path: '/api/v1/public-chatbotConfig/:identifier',
-    target: '/api/v1/public-chatbotConfig',
-  },
-  streaming: {
-    method: 'GET',
-    path: '/api/v1/chatflows-streaming/:identifier',
-    target: '/api/v1/chatflows-streaming',
-  },
-  files: {
-    method: 'GET',
-    path: '/api/v1/get-upload-file',
-    target: '/api/v1/get-upload-file',
-  },
+  // config: {
+  //   method: 'GET',
+  //   path: '/api/v1/public-chatbotConfig/:identifier',
+  //   target: '/api/v1/public-chatbotConfig',
+  // },
+  // streaming: {
+  //   method: 'GET',
+  //   path: '/api/v1/chatflows-streaming/:identifier',
+  //   target: '/api/v1/chatflows-streaming',
+  // },
+  // leads: {
+  //   method: 'POST',
+  //   path: '/api/v1/leads/:identifier',
+  //   target: '/api/v1/leads',
+  // },
+  // files: {
+  //   method: 'GET',
+  //   path: '/api/v1/get-upload-file',
+  //   target: '/api/v1/get-upload-file',
+  // },
 };
 
 const handleProxy = async (req, res, targetPath) => {
@@ -262,10 +267,8 @@ const handleProxy = async (req, res, targetPath) => {
     if (!chatflow) {
       return res.status(404).json({ error: 'Not Found' });
     }
-
-    if (req.query.chatId && req.query.fileName) {
-      const url = `${API_HOST}${targetPath}?chatflowId=${chatflow.chatflowId}&chatId=${req.query.chatId}&fileName=${req.query.fileName}`;
-
+    if (req.query.sessionId && req.query.chatInput) {
+      const url = `${API_HOST}${targetPath}?chatflowId=${chatflow.chatflowId}&sessionId=${req.query.sessionId}&chatInput=${req.query.chatInput}`;
       const response = await fetch(url, {
         method: req.method,
         headers: {
@@ -390,6 +393,5 @@ const server = app.listen(PORT, HOST, () => {
     process.env.BASE_URL || process.env.NODE_ENV === 'production'
       ? `https://${process.env.HOST || 'localhost'}`
       : `http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${addr.port}`;
-
   generateEmbedScript(baseUrl);
 });

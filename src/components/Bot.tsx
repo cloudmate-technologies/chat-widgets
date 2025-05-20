@@ -3,9 +3,9 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   sendMessageQuery,
   upsertVectorStoreWithFormData,
-  isStreamAvailableQuery,
+  // isStreamAvailableQuery,
   IncomingInput,
-  getChatbotConfig,
+  // getChatbotConfig,
   FeedbackRatingType,
   createAttachmentWithFormData,
 } from '@/queries/sendMessageQuery';
@@ -124,6 +124,8 @@ export type MessageType = {
   id?: string;
   followUpPrompts?: string;
   dateTime?: string;
+  // chatInput?: string;
+  // sessionId?: string;
 };
 
 type IUploads = {
@@ -1019,13 +1021,13 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     });
 
     const body: IncomingInput = {
-      question: value,
-      chatId: chatId(),
+      chatInput: value,
+      sessionId: chatId(),
     };
 
     if (startInputType() === 'formInput') {
       body.form = formData;
-      delete body.question;
+      delete body.chatInput;
     }
 
     if (uploads && uploads.length > 0) body.uploads = uploads;
@@ -1293,115 +1295,115 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     }
 
     // Determine if particular chatflow is available for streaming
-    const { data } = await isStreamAvailableQuery({
-      chatflowid: props.chatflowid,
-      apiHost: props.apiHost,
-      onRequest: props.onRequest,
-    });
+    // const { data } = await isStreamAvailableQuery({
+    //   chatflowid: props.chatflowid,
+    //   apiHost: props.apiHost,
+    //   onRequest: props.onRequest,
+    // });
 
-    if (data) {
-      setIsChatFlowAvailableToStream(data?.isStreaming ?? false);
-    }
+    // if (data) {
+    //   setIsChatFlowAvailableToStream(data?.isStreaming ?? false);
+    // }
 
     // Get the chatbotConfig
-    const result = await getChatbotConfig({
-      chatflowid: props.chatflowid,
-      apiHost: props.apiHost,
-      onRequest: props.onRequest,
-    });
+    // const result = await getChatbotConfig({
+    //   chatflowid: props.chatflowid,
+    //   apiHost: props.apiHost,
+    //   onRequest: props.onRequest,
+    // });
 
-    if (result.data) {
-      const chatbotConfig = result.data;
+    // if (result.data) {
+    //   const chatbotConfig = result.data;
 
-      if (chatbotConfig.flowData) {
-        const nodes = JSON.parse(chatbotConfig.flowData).nodes ?? [];
-        const startNode = nodes.find((node: any) => node.data.name === 'startAgentflow');
-        if (startNode) {
-          const startInputType = startNode.data.inputs?.startInputType;
-          setStartInputType(startInputType);
+    //   if (chatbotConfig.flowData) {
+    //     const nodes = JSON.parse(chatbotConfig.flowData).nodes ?? [];
+    //     const startNode = nodes.find((node: any) => node.data.name === 'startAgentflow');
+    //     if (startNode) {
+    //       const startInputType = startNode.data.inputs?.startInputType;
+    //       setStartInputType(startInputType);
 
-          const formInputTypes = startNode.data.inputs?.formInputTypes;
-          /* example:
-          "formInputTypes": [
-              {
-                "type": "string",
-                "label": "From",
-                "name": "from",
-                "addOptions": ""
-              },
-              {
-                "type": "number",
-                "label": "Subject",
-                "name": "subject",
-                "addOptions": ""
-              },
-              {
-                "type": "boolean",
-                "label": "Body",
-                "name": "body",
-                "addOptions": ""
-              },
-              {
-                "type": "options",
-                "label": "Choices",
-                "name": "choices",
-                "addOptions": [
-                  {
-                    "option": "choice 1"
-                  },
-                  {
-                    "option": "choice 2"
-                  }
-                ]
-              }
-            ]
-          */
-          if (startInputType === 'formInput' && formInputTypes && formInputTypes.length > 0) {
-            for (const formInputType of formInputTypes) {
-              if (formInputType.type === 'options') {
-                formInputType.options = formInputType.addOptions.map((option: any) => ({
-                  label: option.option,
-                  name: option.option,
-                }));
-              }
-            }
-            setFormInputParams(formInputTypes);
-            setFormTitle(startNode.data.inputs?.formTitle);
-            setFormDescription(startNode.data.inputs?.formDescription);
-          }
-        }
-      }
+    //       const formInputTypes = startNode.data.inputs?.formInputTypes;
+    //       /* example:
+    //       "formInputTypes": [
+    //           {
+    //             "type": "string",
+    //             "label": "From",
+    //             "name": "from",
+    //             "addOptions": ""
+    //           },
+    //           {
+    //             "type": "number",
+    //             "label": "Subject",
+    //             "name": "subject",
+    //             "addOptions": ""
+    //           },
+    //           {
+    //             "type": "boolean",
+    //             "label": "Body",
+    //             "name": "body",
+    //             "addOptions": ""
+    //           },
+    //           {
+    //             "type": "options",
+    //             "label": "Choices",
+    //             "name": "choices",
+    //             "addOptions": [
+    //               {
+    //                 "option": "choice 1"
+    //               },
+    //               {
+    //                 "option": "choice 2"
+    //               }
+    //             ]
+    //           }
+    //         ]
+    //       */
+    //       if (startInputType === 'formInput' && formInputTypes && formInputTypes.length > 0) {
+    //         for (const formInputType of formInputTypes) {
+    //           if (formInputType.type === 'options') {
+    //             formInputType.options = formInputType.addOptions.map((option: any) => ({
+    //               label: option.option,
+    //               name: option.option,
+    //             }));
+    //           }
+    //         }
+    //         setFormInputParams(formInputTypes);
+    //         setFormTitle(startNode.data.inputs?.formTitle);
+    //         setFormDescription(startNode.data.inputs?.formDescription);
+    //       }
+    //     }
+    //   }
 
-      if ((!props.starterPrompts || props.starterPrompts?.length === 0) && chatbotConfig.starterPrompts) {
-        const prompts: string[] = [];
-        Object.getOwnPropertyNames(chatbotConfig.starterPrompts).forEach((key) => {
-          prompts.push(chatbotConfig.starterPrompts[key].prompt);
-        });
-        setStarterPrompts(prompts.filter((prompt) => prompt !== ''));
-      }
-      if (chatbotConfig.chatFeedback) {
-        const chatFeedbackStatus = chatbotConfig.chatFeedback.status;
-        setChatFeedbackStatus(chatFeedbackStatus);
-      }
-      if (chatbotConfig.uploads) {
-        setUploadsConfig(chatbotConfig.uploads);
-      }
-      if (chatbotConfig.leads) {
-        setLeadsConfig(chatbotConfig.leads);
-        if (chatbotConfig.leads?.status && !getLocalStorageChatflow(props.chatflowid)?.lead) {
-          setMessages((prevMessages) => [...prevMessages, { message: '', type: 'leadCaptureMessage' }]);
-        }
-      }
-      if (chatbotConfig.followUpPrompts) {
-        setFollowUpPromptsStatus(chatbotConfig.followUpPrompts.status);
-      }
-      if (chatbotConfig.fullFileUpload) {
-        setFullFileUpload(chatbotConfig.fullFileUpload.status);
-        if (chatbotConfig.fullFileUpload?.allowedUploadFileTypes) {
-          setFullFileUploadAllowedTypes(chatbotConfig.fullFileUpload?.allowedUploadFileTypes);
-        }
-      }
-    }
+    //   if ((!props.starterPrompts || props.starterPrompts?.length === 0) && chatbotConfig.starterPrompts) {
+    //     const prompts: string[] = [];
+    //     Object.getOwnPropertyNames(chatbotConfig.starterPrompts).forEach((key) => {
+    //       prompts.push(chatbotConfig.starterPrompts[key].prompt);
+    //     });
+    //     setStarterPrompts(prompts.filter((prompt) => prompt !== ''));
+    //   }
+    //   if (chatbotConfig.chatFeedback) {
+    //     const chatFeedbackStatus = chatbotConfig.chatFeedback.status;
+    //     setChatFeedbackStatus(chatFeedbackStatus);
+    //   }
+    //   if (chatbotConfig.uploads) {
+    //     setUploadsConfig(chatbotConfig.uploads);
+    //   }
+    //   if (chatbotConfig.leads) {
+    //     setLeadsConfig(chatbotConfig.leads);
+    //     if (chatbotConfig.leads?.status && !getLocalStorageChatflow(props.chatflowid)?.lead) {
+    //       setMessages((prevMessages) => [...prevMessages, { message: '', type: 'leadCaptureMessage' }]);
+    //     }
+    //   }
+    //   if (chatbotConfig.followUpPrompts) {
+    //     setFollowUpPromptsStatus(chatbotConfig.followUpPrompts.status);
+    //   }
+    //   if (chatbotConfig.fullFileUpload) {
+    //     setFullFileUpload(chatbotConfig.fullFileUpload.status);
+    //     if (chatbotConfig.fullFileUpload?.allowedUploadFileTypes) {
+    //       setFullFileUploadAllowedTypes(chatbotConfig.fullFileUpload?.allowedUploadFileTypes);
+    //     }
+    //   }
+    // }
 
     // eslint-disable-next-line solid/reactivity
     return () => {
@@ -1778,7 +1780,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
             </div>
           )}
 
-          {props.showTitle ? (
+          {/* {props.showTitle ? ( */}
             <div
               class="flex flex-row items-center w-full h-[50px] absolute top-0 left-0 z-10"
               style={{
@@ -1795,7 +1797,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
                 </>
               </Show>
               <Show when={props.title}>
-                <span class="px-3 whitespace-pre-wrap font-semibold max-w-full">{props.title}</span>
+                <span class="px-3 whitespace-pre-wrap font-semibold max-w-full">{props.title || "Crypto AI Assistance"}</span>
               </Show>
               <div style={{ flex: 1 }} />
               <DeleteButton
@@ -1808,7 +1810,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
                 <span style={{ 'font-family': 'Poppins, sans-serif' }}>Clear</span>
               </DeleteButton>
             </div>
-          ) : null}
+          {/* ) : null} */}
           <div class="flex flex-col w-full h-full justify-start z-0">
             <div
               ref={chatContainer}

@@ -56,31 +56,28 @@ export const BotBubble = (props: Props) => {
 
   const setBotMessageRef = (el: HTMLSpanElement) => {
     if (el) {
-      el.innerHTML = Marked.parse(props.message.message);
+      // Handle message that might be in JSON array format
+      let messageText = props.message.message;
+      try {
+        const parsedMessage = JSON.parse(messageText);
+        if (Array.isArray(parsedMessage) && parsedMessage.length > 0 && parsedMessage[0].output) {
+          messageText = parsedMessage[0].output;
+        }
+      } catch (e) {
+        // If parsing fails, use the original message
+      }
 
-      // Apply textColor to all links, headings, and other markdown elements except code
-      const textColor = props.textColor ?? defaultTextColor;
-      el.querySelectorAll('a, h1, h2, h3, h4, h5, h6, strong, em, blockquote, li').forEach((element) => {
-        (element as HTMLElement).style.color = textColor;
-      });
+      // Parse markdown content
+      const htmlContent = Marked.parse(messageText);
+      el.innerHTML = htmlContent;
 
-      // Code blocks (with pre) get white text
-      el.querySelectorAll('pre').forEach((element) => {
-        (element as HTMLElement).style.color = '#FFFFFF';
-        // Also ensure any code elements inside pre have white text
-        element.querySelectorAll('code').forEach((codeElement) => {
-          (codeElement as HTMLElement).style.color = '#FFFFFF';
-        });
-      });
-
-      // Inline code (not in pre) gets green text
-      el.querySelectorAll('code:not(pre code)').forEach((element) => {
-        (element as HTMLElement).style.color = '#4CAF50'; // Green color
-      });
-
-      // Set target="_blank" for links
-      el.querySelectorAll('a').forEach((link) => {
-        link.target = '_blank';
+      // Style paragraphs and other elements
+      el.querySelectorAll('p, h1, h2, h3, h4, h5, h6, strong, em, blockquote, li').forEach((element) => {
+        const styledElement = element as HTMLElement;
+        styledElement.style.margin = '0.5em 0';
+        styledElement.style.color = props.textColor ?? defaultTextColor;
+        styledElement.style.fontSize = props.fontSize ? `${props.fontSize}px` : `${defaultFontSize}px`;
+        styledElement.style.lineHeight = '1.5';
       });
 
       // Store the element ref for the copy function
@@ -277,72 +274,47 @@ export const BotBubble = (props: Props) => {
   });
 
   const renderArtifacts = (item: Partial<FileUpload>) => {
-    // Instead of onMount, we'll use a callback ref to apply styles
+    // Only render text content
     const setArtifactRef = (el: HTMLSpanElement) => {
       if (el) {
         const textColor = props.textColor ?? defaultTextColor;
-        // Apply textColor to all elements except code blocks
-        el.querySelectorAll('a, h1, h2, h3, h4, h5, h6, strong, em, blockquote, li').forEach((element) => {
+        // Apply textColor to text elements
+        el.querySelectorAll('h1, h2, h3, h4, h5, h6, strong, em, blockquote, li, p').forEach((element) => {
           (element as HTMLElement).style.color = textColor;
         });
 
-        // Code blocks (with pre) get white text
+        // Style code blocks
         el.querySelectorAll('pre').forEach((element) => {
           (element as HTMLElement).style.color = '#FFFFFF';
-          // Also ensure any code elements inside pre have white text
           element.querySelectorAll('code').forEach((codeElement) => {
             (codeElement as HTMLElement).style.color = '#FFFFFF';
           });
         });
 
-        // Inline code (not in pre) gets green text
+        // Style inline code
         el.querySelectorAll('code:not(pre code)').forEach((element) => {
-          (element as HTMLElement).style.color = '#4CAF50'; // Green color
-        });
-
-        el.querySelectorAll('a').forEach((link) => {
-          link.target = '_blank';
+          (element as HTMLElement).style.color = '#4CAF50';
         });
       }
     };
 
-    return (
-      <>
-        <Show when={item.type === 'png' || item.type === 'jpeg'}>
-          <div class="flex items-center justify-center p-0 m-0">
-            <img
-              class="w-full h-full bg-cover"
-              src={(() => {
-                const isFileStorage = typeof item.data === 'string' && item.data.startsWith('FILE-STORAGE::');
-                return isFileStorage
-                  ? `${props.apiHost}/api/v1/get-upload-file?chatflowId=${props.chatflowid}&chatId=${props.chatId}&fileName=${(
-                      item.data as string
-                    ).replace('FILE-STORAGE::', '')}`
-                  : (item.data as string);
-              })()}
-            />
-          </div>
-        </Show>
-        <Show when={item.type === 'html'}>
-          <div class="mt-2">
-            <div innerHTML={item.data as string} />
-          </div>
-        </Show>
-        <Show when={item.type !== 'png' && item.type !== 'jpeg' && item.type !== 'html'}>
-          <span
-            ref={setArtifactRef}
-            innerHTML={Marked.parse(item.data as string)}
-            class="prose"
-            style={{
-              'background-color': props.backgroundColor ?? defaultBackgroundColor,
-              color: props.textColor ?? defaultTextColor,
-              'border-radius': '6px',
-              'font-size': props.fontSize ? `${props.fontSize}px` : `${defaultFontSize}px`,
-            }}
-          />
-        </Show>
-      </>
-    );
+    // Only render text content
+    if (item.type !== 'png' && item.type !== 'jpeg' && item.type !== 'html') {
+      return (
+        <span
+          ref={setArtifactRef}
+          innerHTML={Marked.parse(item.data as string)}
+          class="prose"
+          style={{
+            'background-color': props.backgroundColor ?? defaultBackgroundColor,
+            color: props.textColor ?? defaultTextColor,
+            'border-radius': '6px',
+            'font-size': props.fontSize ? `${props.fontSize}px` : `${defaultFontSize}px`,
+          }}
+        />
+      );
+    }
+    return null;
   };
 
   const formatDateTime = (dateTimeString: string | undefined, showDate: boolean | undefined, showTime: boolean | undefined) => {

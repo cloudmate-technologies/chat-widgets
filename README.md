@@ -154,7 +154,7 @@ You can also customize chatbot with different configuration
       chatWindow: {
         showTitle: true,
         showAgentMessages: true,
-        title: 'Flowise Bot',
+        title: 'Gifto Bot',
         titleAvatarSrc: 'https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/google-messages.svg',
         titleBackgroundColor: '#3B81F6',
         titleTextColor: '#ffffff',
@@ -183,7 +183,7 @@ You can also customize chatbot with different configuration
           avatarSrc: 'https://raw.githubusercontent.com/zahidkhawaja/langchain-chat-nextjs/main/public/usericon.png',
         },
         textInput: {
-          placeholder: 'Type your question',
+          placeholder: 'ask for help',
           backgroundColor: '#ffffff',
           textColor: '#303235',
           sendButtonColor: '#3B81F6',
@@ -205,8 +205,7 @@ You can also customize chatbot with different configuration
         footer: {
           textColor: '#303235',
           text: 'Powered by',
-          company: 'Flowise',
-          companyLink: 'https://flowiseai.com',
+          company: 'gifto',
         },
       },
     },

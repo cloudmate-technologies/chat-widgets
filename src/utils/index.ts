@@ -26,6 +26,7 @@ export const sendRequest = async <ResponseData>(
         ? {
             'Content-Type': 'application/json',
             ...params.headers,
+            'x-api-key': 'Nmd8kdozTljSs40hj',
           }
         : undefined;
     let body: string | FormData | undefined = typeof params !== 'string' && isDefined(params.body) ? JSON.stringify(params.body) : undefined;

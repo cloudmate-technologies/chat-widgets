@@ -2,7 +2,8 @@ import { FileUpload, IAction } from '@/components/Bot';
 import { sendRequest } from '@/utils/index';
 
 export type IncomingInput = {
-  question?: string;
+  chatInput?: string;
+  sessionId?: string;
   form?: Record<string, unknown>;
   uploads?: FileUpload[];
   overrideConfig?: Record<string, unknown>;
@@ -107,19 +108,19 @@ export const upsertVectorStoreWithFormData = ({ chatflowid, apiHost = 'http://lo
     onRequest: onRequest,
   });
 
-export const getChatbotConfig = ({ chatflowid, apiHost = 'http://localhost:3000', onRequest }: MessageRequest) =>
-  sendRequest<any>({
-    method: 'GET',
-    url: `${apiHost}/api/v1/public-chatbotConfig/${chatflowid}`,
-    onRequest: onRequest,
-  });
+// export const getChatbotConfig = ({ chatflowid, apiHost = 'http://localhost:3000', onRequest }: MessageRequest) =>
+//   sendRequest<any>({
+//     method: 'GET',
+//     url: `${apiHost}/api/v1/public-chatbotConfig/${chatflowid}`,
+//     onRequest: onRequest,
+//   });
 
-export const isStreamAvailableQuery = ({ chatflowid, apiHost = 'http://localhost:3000', onRequest }: MessageRequest) =>
-  sendRequest<any>({
-    method: 'GET',
-    url: `${apiHost}/api/v1/chatflows-streaming/${chatflowid}`,
-    onRequest: onRequest,
-  });
+// export const isStreamAvailableQuery = ({ chatflowid, apiHost = 'http://localhost:3000', onRequest }: MessageRequest) =>
+//   sendRequest<any>({
+//     method: 'GET',
+//     url: `${apiHost}/api/v1/chatflows-streaming/${chatflowid}`,
+//     onRequest: onRequest,
+//   });
 
 export const sendFileDownloadQuery = ({ apiHost = 'http://localhost:3000', body, onRequest }: MessageRequest) =>
   sendRequest<any>({

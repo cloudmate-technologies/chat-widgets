@@ -207,7 +207,7 @@ export const TextInput = (props: TextInputProps) => {
           value={props.inputValue}
           fontSize={props.fontSize}
           disabled={props.disabled}
-          placeholder={props.placeholder ?? 'Type your question'}
+          placeholder={props.placeholder ?? 'Ask For Help'}
         />
         {props.uploadsConfig?.isSpeechToTextEnabled ? (
           <RecordAudioButton
