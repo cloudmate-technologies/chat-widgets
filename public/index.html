@@ -17,11 +17,12 @@
 
 <body>
     <div id="root"></div>
+    <autocampaign-fullchatbot></autocampaign-fullchatbot>
     <script type="module">
         import Chatbot from 'https://cdn.jsdelivr.net/gh/cloudmate-technologies/chat-widgets@feat/agent-flow/dist/web.js'
         
         // Initialize chatbot with popup functionality
-        Chatbot.init({
+        Chatbot.initFull({
             // TODO: change to the correct chatflow id
             chatflowid: 'support_agent',
             // TODO: change to the correct webhook url
@@ -34,8 +35,6 @@
                     title: 'Gifto AI Assistant',
                     backgroundColor: '#ffffff',
                     fontSize: 16,
-                    height: window.innerHeight,
-                    width: window.innerWidth,
                     footer: {
                         textColor: '#303235',
                         text: 'Powered by',
@@ -44,7 +43,7 @@
                     },
                 },
             },
-        });
+            });
 
     </script>
 </body>
