@@ -1780,7 +1780,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
             </div>
           )}
 
-          {/* {props.showTitle ? ( */}
+          {props.showTitle ? (
             <div
               class="flex flex-row items-center w-full h-[50px] absolute top-0 left-0 z-10"
               style={{
@@ -1810,7 +1810,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
                 <span style={{ 'font-family': 'Poppins, sans-serif' }}>Clear</span>
               </DeleteButton>
             </div>
-          {/* ) : null} */}
+          ) : null}
           <div class="flex flex-col w-full h-full justify-start z-0">
             <div
               ref={chatContainer}
