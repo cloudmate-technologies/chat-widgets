@@ -12,25 +12,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flowise Chatbot Widget</title>
+    <title>Gifto Chatbot Widget</title>
 </head>
 
 <body>
     <div id="root"></div>
     <script type="module">
+        // import Chatbot from 'https://cdn.jsdelivr.net/gh/cloudmate-technologies/chat-widgets/dist/web.js'
         import Chatbot from './web.js'
         
-        // Example initialization:
-        // If your .env contains:
-        // agent1=xyz789-uvw456,https://example.com
-        // support=abc123-def456,https://example.com
-        // salesbot=ghi123-jkl456,https://example.com
-        //
-        // Then use the environment variable name as chatflowid:
+        // Initialize chatbot with popup functionality
         Chatbot.init({
-            chatflowid: 'support_agent',    // or 'support', 'salesbot', etc.
-            apiHost: 'https://primary-production-1ed5e.up.railway.app/webhook/619dd051-9dbb-470f-8a29-1aace2491c5a'
-        })
+            chatflowid: 'support_agent',
+            apiHost: 'https://primary-production-1ed5e.up.railway.app/webhook/619dd051-9dbb-470f-8a29-1aace2491c5a',
+            theme: {
+                chatWindow: {
+                    height: window.innerHeight,
+                    width: window.innerWidth,
+                }
+            }
+        });
+        
     </script>
 </body>
 

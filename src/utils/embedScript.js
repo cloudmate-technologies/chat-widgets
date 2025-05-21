@@ -2,7 +2,7 @@ export function generateEmbedScript(serverUrl) {
   const scriptPopup = `<script type="module">
   import Chatbot from '${serverUrl}/web.js'
   Chatbot.init({
-      chatflowid: 'your-identifier-here',
+      chatflowid: 'support_agent',
       apiHost: '${serverUrl}'
   })
 </script>`;
@@ -11,7 +11,7 @@ export function generateEmbedScript(serverUrl) {
 <script type="module">
   import Chatbot from '${serverUrl}/web.js'
   Chatbot.initFull({
-      chatflowid: 'your-identifier-here',
+      chatflowid: 'support_agent',
       apiHost: '${serverUrl}'
   })
 </script>`;
