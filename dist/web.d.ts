@@ -1,4 +1,5 @@
-declare const chatbot: {
+import './assets/index.css';
+declare const _default: {
     initFull: (props: {
         chatflowid: string;
         apiHost?: string | undefined;
@@ -19,5 +20,5 @@ declare const chatbot: {
     }) => void;
     destroy: () => void;
 };
-export default chatbot;
+export default _default;
 //# sourceMappingURL=web.d.ts.map

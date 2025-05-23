@@ -1,7 +1,6 @@
 import { FileUpload, IAction } from '@/components/Bot';
 export type IncomingInput = {
-    chatInput?: string;
-    sessionId?: string;
+    question?: string;
     form?: Record<string, unknown>;
     uploads?: FileUpload[];
     overrideConfig?: Record<string, unknown>;
@@ -68,6 +67,14 @@ export declare const createAttachmentWithFormData: ({ chatflowid, apiHost, formD
 }>;
 export declare const upsertVectorStoreWithFormData: ({ chatflowid, apiHost, formData, onRequest }: UpsertRequest) => Promise<{
     data?: unknown;
+    error?: Error | undefined;
+}>;
+export declare const getChatbotConfig: ({ chatflowid, apiHost, onRequest }: MessageRequest) => Promise<{
+    data?: any;
+    error?: Error | undefined;
+}>;
+export declare const isStreamAvailableQuery: ({ chatflowid, apiHost, onRequest }: MessageRequest) => Promise<{
+    data?: any;
     error?: Error | undefined;
 }>;
 export declare const sendFileDownloadQuery: ({ apiHost, body, onRequest }: MessageRequest) => Promise<{
