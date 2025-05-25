@@ -58,7 +58,7 @@ const parseChatflows = () => {
 
     for (const [identifier, value] of chatflowVars) {
       const parts = value.split(',').map((s) => s.trim());
-      const chatflowId = parts[0];
+      const chatflowId = parts[0] || identifier;
       const configuredDomains = parts.length > 1 ? parts.slice(1) : [];
 
       const domains = [...new Set([...defaultDomains, ...configuredDomains])];
@@ -138,12 +138,29 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 app.use(
   cors({
-    origin: true,
+    origin: '*',  // Allow all origins
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
-    allowedHeaders: ['*'],
-  }),
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    preflightContinue: true,
+    optionsSuccessStatus: 204
+  })
 );
+
+// Add a middleware to handle OPTIONS requests and set CORS headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+});
 
 app.get('/', (_, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -235,9 +252,10 @@ const proxyEndpoints = {
   },
   config: {
     method: 'GET',
-    path: '/api/v1/public-chatbotConfig/:identifier',
-    target: '/api/v1/public-chatbotConfig',
+    path: '/api/v1/chatbotConfig/:identifier',
+    target: '/api/v1/chatbotConfig',
   },
+
   streaming: {
     method: 'GET',
     path: '/api/v1/chatflows-streaming/:identifier',
@@ -262,6 +280,12 @@ const handleProxy = async (req, res, targetPath) => {
     if (!chatflow) {
       return res.status(404).json({ error: 'Not Found' });
     }
+
+    // Set CORS headers for all responses
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.header('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
 
     if (req.query.chatId && req.query.fileName) {
       const url = `${API_HOST}${targetPath}?chatflowId=${chatflow.chatflowId}&chatId=${req.query.chatId}&fileName=${req.query.fileName}`;
@@ -295,6 +319,9 @@ const handleProxy = async (req, res, targetPath) => {
       headers: {
         ...(req.method !== 'GET' && { 'Content-Type': 'application/json' }),
         Authorization: `Bearer ${API_KEY}`,
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Accept, Origin'
       },
       body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined,
     });
@@ -326,6 +353,10 @@ const handleProxy = async (req, res, targetPath) => {
     return response.body.pipe(res);
   } catch (error) {
     console.error('Proxy error:', error);
+    // Set CORS headers even for error responses
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -374,6 +405,144 @@ app.post('/api/v1/attachments/:identifier/:chatId', upload.array('files'), async
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
+
+const chatbotConfig = {
+  chatflowId: "support-agent",
+  features: {
+    conversations: true,
+    scheduleCall: true,
+    callAgent: false,
+    knowledgeBase: true
+  },
+  leadCapture: {
+    enabled: true,
+    fields: [
+      { label: "Name", type: "text", required: true },
+      { label: "Email", type: "email", required: true },
+      { label: "Phone Number", type: "text", required: false },
+      { label: "Country", type: "dropdown", options: ["India", "USA", "UK", "Australia"], required: true },
+      { label: "Preferred Contact Date", type: "calendar", required: false }
+    ]
+  },
+  theme: {
+    apiHost: "http://localhost:3000",
+    button: {
+      backgroundColor: "#3B81F6",
+      right: 20,
+      bottom: 20,
+      size: 48,
+      dragAndDrop: true,
+      iconColor: "white",
+      customIconSrc: "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/google-messages.svg",
+      autoWindowOpen: {
+        autoOpen: true,
+        openDelay: 2,
+        autoOpenOnMobile: false
+      }
+    },
+    tooltip: {
+      showTooltip: true,
+      tooltipMessage: "Hi There 👋!",
+      tooltipBackgroundColor: "black",
+      tooltipTextColor: "white",
+      tooltipFontSize: 16
+    },
+    disclaimer: {
+      title: "Disclaimer",
+      message: 'By using this chatbot, you agree to the <a target="_blank" href="https://flowiseai.com/terms">Terms & Condition</a>',
+      textColor: "black",
+      buttonColor: "#3b82f6",
+      buttonText: "Start Chatting",
+      buttonTextColor: "white",
+      blurredBackgroundColor: "rgba(0, 0, 0, 0.4)",
+      backgroundColor: "white"
+    },
+    customCSS: "",
+    chatWindow: {
+      showTitle: true,
+      showAgentMessages: true,
+      title: "Flowise Bot",
+      titleAvatarSrc: "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/google-messages.svg",
+      welcomeMessage: "Hello! This is custom welcome message",
+      errorMessage: "This is a custom error message",
+      backgroundColor: "#ffffff",
+      backgroundImage: "",
+      height: 700,
+      width: 400,
+      fontSize: 16,
+      starterPrompts: ["What is a bot?", "Who are you?"],
+      starterPromptFontSize: 15,
+      clearChatOnReload: false,
+      sourceDocsTitle: "Sources:",
+      renderHTML: true,
+      botMessage: {
+        backgroundColor: "#f7f8ff",
+        textColor: "#303235",
+        showAvatar: true,
+        avatarSrc: "https://raw.githubusercontent.com/zahidkhawaja/langchain-chat-nextjs/main/public/parroticon.png"
+      },
+      userMessage: {
+        backgroundColor: "#3B81F6",
+        textColor: "#ffffff",
+        showAvatar: true,
+        avatarSrc: "https://raw.githubusercontent.com/zahidkhawaja/langchain-chat-nextjs/main/public/usericon.png"
+      },
+      textInput: {
+        placeholder: "Type your question",
+        backgroundColor: "#ffffff",
+        textColor: "#303235",
+        sendButtonColor: "#3B81F6",
+        maxChars: 50,
+        maxCharsWarningMessage: "You exceeded the characters limit. Please input less than 50 characters.",
+        autoFocus: true,
+        sendMessageSound: true,
+        receiveMessageSound: true
+      },
+      feedback: {
+        color: "#303235"
+      },
+      dateTimeToggle: {
+        date: true,
+        time: true
+      },
+      footer: {
+        textColor: "#303235",
+        text: "Powered by",
+        company: "Flowise",
+        companyLink: "https://flowiseai.com"
+      }
+    }
+  }
+};
+
+// Route to serve the chatbot config
+app.get('/api/v1/chatbotConfig/:identifier', (req, res) => {
+  try {
+    const identifier = req.params.identifier;
+    const chatflow = getChatflowDetails(identifier);
+    
+    if (!chatflow) {
+      return res.status(404).json({ error: 'Chatflow not found' });
+    }
+
+    // Merge the default config with any chatflow-specific settings
+    const config = {
+      ...chatbotConfig,
+      chatflowId: chatflow.chatflowId, // Use the actual chatflow ID from chatflow object
+      theme: {
+        ...chatbotConfig.theme,
+        apiHost: "http://localhost:3000" // Use the actual API host from environment
+      }
+    };
+    
+    res.json({data: config});
+  } catch (error) {
+    console.error('Error serving chatbot config:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'Not Found' });

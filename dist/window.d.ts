@@ -12,10 +12,12 @@ export declare const initFull: (props: BotProps & {
     id?: string;
 }) => void;
 export declare const init: (props: BotProps) => void;
+export declare const initAutoCampaign: (props: BotProps) => void;
 export declare const destroy: () => void;
 type Chatbot = {
     initFull: typeof initFull;
     init: typeof init;
+    initAutoCampaign: typeof initAutoCampaign;
     destroy: typeof destroy;
 };
 export declare const parseChatbot: () => {
@@ -23,6 +25,7 @@ export declare const parseChatbot: () => {
         id?: string;
     }) => void;
     init: (props: BotProps) => void;
+    initAutoCampaign: (props: BotProps) => void;
     destroy: () => void;
 };
 export declare const injectChatbotInWindow: (bot: Chatbot) => void;

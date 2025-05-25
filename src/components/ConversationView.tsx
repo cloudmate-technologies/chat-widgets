@@ -1,5 +1,6 @@
-import { createSignal, For } from 'solid-js';
+import { createSignal, For, onMount, onCleanup, Show, createEffect } from 'solid-js';
 import { ChatIcon } from './AgodifyIcons';
+import { LeadForm, LeadFormData } from './LeadForm';
 
 // Message types
 type BaseMessage = {
@@ -71,10 +72,16 @@ type ConversationViewProps = {
   conversationTitle: string;
   onUpdateTitle: (newTitle: string) => void;
   onMessageSent: (text: string) => void;
+  leadFormStatus?: boolean;
 };
 
 export const ConversationView = (props: ConversationViewProps) => {
   const [message, setMessage] = createSignal('');
+  const [showLatestButton, setShowLatestButton] = createSignal(false);
+  const [carouselPositions, setCarouselPositions] = createSignal<{ [key: string]: number }>({});
+  const [showLeadForm, setShowLeadForm] = createSignal(true);
+  const [isLeadSaved, setIsLeadSaved] = createSignal(false);
+  const carouselRefs: { [key: string]: HTMLDivElement | undefined } = {};
   const [messages, setMessages] = createSignal<Message[]>([
     {
       id: '1',
@@ -170,6 +177,93 @@ export const ConversationView = (props: ConversationViewProps) => {
     }
   ]);
 
+  // Reference for messages container
+  let messagesContainerRef: HTMLDivElement | undefined;
+
+  // Scroll to bottom function with force option
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth', force = false) => {
+    if (messagesContainerRef) {
+      const shouldForceScroll = force || 
+        (messagesContainerRef.scrollHeight - messagesContainerRef.scrollTop - messagesContainerRef.clientHeight < 100);
+      
+      if (shouldForceScroll) {
+        messagesContainerRef.scrollTo({
+          top: messagesContainerRef.scrollHeight,
+          behavior
+        });
+      }
+    }
+  };
+
+  // Handle scroll events
+  const handleScroll = (e: Event) => {
+    const container = e.target as HTMLDivElement;
+    const scrollTop = container.scrollTop;
+    const scrollBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const topThreshold = 10; // Show button after scrolling 100px from top
+    const bottomThreshold = 10; // Show button when 100px from bottom
+    
+    // Show button when:
+    // 1. Not at the very top (scrolled down at least topThreshold)
+    // 2. Not at the very bottom (more than bottomThreshold from bottom)
+    const shouldShowButton = scrollTop > topThreshold && scrollBottom > bottomThreshold;
+    setShowLatestButton(shouldShowButton);
+  };
+
+  // Effect to handle scroll on messages change
+  createEffect(() => {
+    const currentMessages = messages();
+    if (currentMessages.length && !showLeadForm()) {
+      setTimeout(() => {
+        scrollToBottom('auto', true);
+        if (messagesContainerRef) {
+          const scrollTop = messagesContainerRef.scrollTop;
+          const scrollBottom = messagesContainerRef.scrollHeight - messagesContainerRef.scrollTop - messagesContainerRef.clientHeight;
+          const topThreshold = 10;
+          const bottomThreshold = 10;
+          const shouldShowButton = scrollTop > topThreshold && scrollBottom > bottomThreshold;
+          setShowLatestButton(shouldShowButton);
+        }
+      }, 100);
+    }
+  });
+
+  // Check if lead form is completed on mount
+  onMount(() => {
+    const leadFormData = localStorage.getItem('leadFormData');
+    if (leadFormData) {
+      setShowLeadForm(false);
+      setIsLeadSaved(true);
+    } else {
+      // Only show lead form if status is true and not completed
+      setShowLeadForm(props.leadFormStatus ?? false);
+      setIsLeadSaved(false);
+    }
+
+    // Load saved messages from localStorage
+    const savedMessages = localStorage.getItem('chatMessages');
+    if (savedMessages) {
+      const parsedMessages = JSON.parse(savedMessages);
+      setMessages(parsedMessages.map((msg: any) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp)
+      })));
+    }
+
+    // Add scroll event listener
+    if (messagesContainerRef) {
+      messagesContainerRef.addEventListener('scroll', handleScroll);
+      // Initial scroll to bottom
+      setTimeout(() => scrollToBottom('auto', true), 100);
+    }
+
+    onCleanup(() => {
+      if (messagesContainerRef) {
+        messagesContainerRef.removeEventListener('scroll', handleScroll);
+      }
+    });
+  });
+
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', { 
       hour: '2-digit', 
@@ -178,9 +272,42 @@ export const ConversationView = (props: ConversationViewProps) => {
     });
   };
 
+  const handleLeadFormSubmit = (data: LeadFormData) => {
+    setShowLeadForm(false);
+    setIsLeadSaved(true);
+    
+    // Store lead data in localStorage
+    localStorage.setItem('leadFormData', JSON.stringify(data));
+    
+    // Add welcome message after lead form submission
+    const welcomeMessage: TextMessage = {
+      id: Date.now().toString(),
+      type: 'text',
+      text: `Hi ${data.name}! How can I help you today?`,
+      isUser: false,
+      sender: "Chatwoot Assistant",
+      timestamp: new Date()
+    };
+    
+    setMessages((prev) => {
+      const newMessages = [...prev, welcomeMessage];
+      localStorage.setItem('chatMessages', JSON.stringify(newMessages));
+      return newMessages;
+    });
+
+    // Force scroll to bottom after form submission and check scroll position
+    setTimeout(() => {
+      scrollToBottom('auto', true);
+      if (messagesContainerRef) {
+        const scrollBottom = messagesContainerRef.scrollHeight - messagesContainerRef.scrollTop - messagesContainerRef.clientHeight;
+        setShowLatestButton(scrollBottom > 300);
+      }
+    }, 100);
+  };
+
   const handleSendMessage = () => {
     const text = message().trim();
-    if (text) {
+    if (text && isLeadSaved()) {
       const newMessage: TextMessage = {
         id: Date.now().toString(),
         type: 'text',
@@ -188,9 +315,16 @@ export const ConversationView = (props: ConversationViewProps) => {
         isUser: true,
         timestamp: new Date()
       };
-      setMessages([...messages(), newMessage]);
+      
+      setMessages((prev) => {
+        const newMessages = [...prev, newMessage];
+        localStorage.setItem('chatMessages', JSON.stringify(newMessages));
+        return newMessages;
+      });
+      
       setMessage('');
       props.onMessageSent(text);
+      setTimeout(() => scrollToBottom('smooth', true), 100);
     }
   };
 
@@ -207,6 +341,8 @@ export const ConversationView = (props: ConversationViewProps) => {
       };
       setMessages([...messages(), newMessage]);
       props.onMessageSent(buttonLabel);
+      // Scroll to bottom after button click
+      setTimeout(() => scrollToBottom(), 100);
     }
   };
 
@@ -220,6 +356,8 @@ export const ConversationView = (props: ConversationViewProps) => {
     };
     setMessages([...messages(), newMessage]);
     props.onMessageSent(chipLabel);
+    // Scroll to bottom after chip click
+    setTimeout(() => scrollToBottom(), 100);
   };
 
   const handleKeyPress = (e: KeyboardEvent) => {
@@ -229,12 +367,71 @@ export const ConversationView = (props: ConversationViewProps) => {
     }
   };
 
+  // Prevent modal from closing when clicking inside
+  const handleContainerClick = (e: MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  // Carousel navigation functions
+  const scrollCarousel = (direction: 'prev' | 'next', carouselId: string, totalCards: number) => {
+    const container = carouselRefs[carouselId];
+    if (!container) return;
+
+    const cardWidth = 260 + 12; // card width + gap
+    const currentPosition = carouselPositions()[carouselId] || 0;
+    
+    let newPosition;
+    if (direction === 'next') {
+      newPosition = Math.min(currentPosition + 1, totalCards - 1);
+    } else {
+      newPosition = Math.max(currentPosition - 1, 0);
+    }
+    
+    setCarouselPositions({ ...carouselPositions(), [carouselId]: newPosition });
+    
+    container.scrollTo({
+      left: newPosition * cardWidth,
+      behavior: 'smooth'
+    });
+  };
+
+  const renderCarouselNavigation = (carouselId: string, totalCards: number) => {
+    const currentPosition = carouselPositions()[carouselId] || 0;
+    
+    return (
+      <>
+        <button 
+          class="carousel-nav-button prev" 
+          onClick={(e) => {
+            e.stopPropagation();
+            scrollCarousel('prev', carouselId, totalCards);
+          }}
+          disabled={currentPosition === 0}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <button 
+          class="carousel-nav-button next" 
+          onClick={(e) => {
+            e.stopPropagation();
+            scrollCarousel('next', carouselId, totalCards);
+          }}
+          disabled={currentPosition === totalCards - 1}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </>
+    );
+  };
+
   const renderMessage = (msg: Message) => {
     switch (msg.type) {
       case 'text':
-        return (
-          <div class="message-text">{msg.text}</div>
-        );
+        return <div class="message-text">{msg.text}</div>;
 
       case 'text_with_button':
         return (
@@ -283,38 +480,52 @@ export const ConversationView = (props: ConversationViewProps) => {
         );
 
       case 'carousel':
+        const carouselId = `carousel-${msg.id}`;
+        const totalCards = msg.cards.length;
         return (
-          <div class="message-carousel">
-            <div class="carousel-container">
-              <For each={msg.cards}>
-                {(card) => (
-                  <div class="carousel-card">
-                    {card.imageUrl && (
-                      <img src={card.imageUrl} alt={card.title} class="carousel-card-image" />
-                    )}
-                    <div class="carousel-card-content">
-                      <h4 class="carousel-card-title">{card.title}</h4>
-                      {card.subtitle && <p class="carousel-card-subtitle">{card.subtitle}</p>}
-                      {card.buttons && (
-                        <div class="carousel-card-buttons">
-                          <For each={card.buttons}>
-                            {(button) => (
-                              <button 
-                                class="carousel-card-button"
-                                onClick={() => handleButtonClick(button.action, button.value, button.label)}
-                              >
-                                {button.label}
-                              </button>
-                            )}
-                          </For>
-                        </div>
+          <>
+            <div class="message-carousel">
+              <div 
+                class="carousel-container" 
+                ref={(el) => carouselRefs[carouselId] = el}
+                onScroll={(e) => {
+                  const container = e.currentTarget;
+                  const cardWidth = 260 + 12;
+                  const newPosition = Math.round(container.scrollLeft / cardWidth);
+                  setCarouselPositions({ ...carouselPositions(), [carouselId]: newPosition });
+                }}
+              >
+                <For each={msg.cards}>
+                  {(card) => (
+                    <div class="carousel-card">
+                      {card.imageUrl && (
+                        <img src={card.imageUrl} alt={card.title} class="carousel-card-image" />
                       )}
+                      <div class="carousel-card-content">
+                        <h4 class="carousel-card-title">{card.title}</h4>
+                        {card.subtitle && <p class="carousel-card-subtitle">{card.subtitle}</p>}
+                        {card.buttons && (
+                          <div class="carousel-card-buttons">
+                            <For each={card.buttons}>
+                              {(button) => (
+                                <button 
+                                  class="carousel-card-button"
+                                  onClick={() => handleButtonClick(button.action, button.value, button.label)}
+                                >
+                                  {button.label}
+                                </button>
+                              )}
+                            </For>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </For>
+                  )}
+                </For>
+              </div>
             </div>
-          </div>
+            {renderCarouselNavigation(carouselId, totalCards)}
+          </>
         );
 
       case 'suggestion_chips':
@@ -342,7 +553,7 @@ export const ConversationView = (props: ConversationViewProps) => {
   };
 
   return (
-    <div class="conversation-view">
+    <div class="conversation-view" onClick={handleContainerClick}>
       <div class="conversation-header">
         <button onClick={props.onClose} class="back-button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -360,58 +571,84 @@ export const ConversationView = (props: ConversationViewProps) => {
         </div>
       </div>
 
-      <div class="messages-container">
-        <div class="date-separator">Today</div>
-        <For each={messages()}>
-          {(msg) => (
-            <div class={`message ${msg.isUser ? 'user' : 'bot'}`}>
-              {!msg.isUser && (
-                <div class="bot-avatar">
-                  <ChatIcon />
+      <Show when={showLeadForm() && props.leadFormStatus}>
+        <LeadForm onSubmit={handleLeadFormSubmit} />
+      </Show>
+
+      <Show when={!showLeadForm() || !props.leadFormStatus}>
+        <div class="messages-wrapper">
+          {/* Latest Messages Button */}
+          <Show when={showLatestButton()}>
+            <button 
+              class="latest-messages-button"
+              onClick={() => scrollToBottom('smooth', true)}
+            >
+              Latest Messages
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+          </Show>
+
+          <div 
+            class="messages-container" 
+            ref={messagesContainerRef}
+          >
+            <div class="date-separator">Today</div>
+            <For each={messages()}>
+              {(msg) => (
+                <div class={`message ${msg.isUser ? 'user' : 'bot'}`}>
+                  {!msg.isUser && (
+                    <div class="bot-avatar">
+                      <ChatIcon />
+                    </div>
+                  )}
+                  <div class="message-content">
+                    {msg.sender && <div class="message-sender">{msg.sender}</div>}
+                    {renderMessage(msg)}
+                    <div class="message-timestamp">{formatTime(msg.timestamp)}</div>
+                  </div>
                 </div>
               )}
-              <div class="message-content">
-                {msg.sender && <div class="message-sender">{msg.sender}</div>}
-                {renderMessage(msg)}
-                <div class="message-timestamp">{formatTime(msg.timestamp)}</div>
-              </div>
-            </div>
-          )}
-        </For>
-      </div>
+            </For>
+          </div>
+        </div>
 
-      <div class="input-container">
-        <input
-          type="text"
-          value={message()}
-          onInput={(e) => setMessage(e.currentTarget.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Type your message"
-          class="message-input"
-        />
-        <button 
-          class="send-button"
-          onClick={handleSendMessage}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"></line>
-            <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
-          </svg>
-        </button>
-        <button class="attachment-button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-          </svg>
-        </button>
-        <button class="emoji-button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-            <line x1="9" y1="9" x2="9.01" y2="9"/>
-            <line x1="15" y1="9" x2="15.01" y2="9"/>
-          </svg>
-        </button>
-      </div>
+        <div class="input-container">
+          <input
+            type="text"
+            value={message()}
+            onInput={(e) => setMessage(e.currentTarget.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Type your message"
+            class="message-input"
+            disabled={!isLeadSaved()}
+          />
+          <button 
+            class="send-button"
+            onClick={handleSendMessage}
+            disabled={!isLeadSaved()}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+            </svg>
+          </button>
+          <button class="attachment-button" disabled={!isLeadSaved()}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+          </button>
+          <button class="emoji-button" disabled={!isLeadSaved()}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+              <line x1="9" y1="9" x2="9.01" y2="9"/>
+              <line x1="15" y1="9" x2="15.01" y2="9"/>
+            </svg>
+          </button>
+        </div>
+      </Show>
 
       <style>{`
         * {
@@ -428,6 +665,7 @@ export const ConversationView = (props: ConversationViewProps) => {
           border-radius: 12px;
           overflow: hidden;
           box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+          position: relative;
         }
 
         .conversation-header {
@@ -474,7 +712,7 @@ export const ConversationView = (props: ConversationViewProps) => {
           width: 44px;
           height: 44px;
           border-radius: 50%;
-          background: #4f46e5;
+          background: #1A73E8;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -503,11 +741,21 @@ export const ConversationView = (props: ConversationViewProps) => {
           line-height: 1.4;
         }
 
+        .messages-wrapper {
+          position: relative;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
         .messages-container {
           flex: 1;
           overflow-y: auto;
-          padding: 20px;
+          padding: 0px 20px 20px 20px;
           background: #f9fafb;
+          position: relative;
+          scroll-behavior: smooth;
         }
 
         .messages-container::-webkit-scrollbar {
@@ -564,7 +812,7 @@ export const ConversationView = (props: ConversationViewProps) => {
           width: 36px;
           height: 36px;
           border-radius: 50%;
-          background: #4f46e5;
+          background: #1A73E8;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -585,10 +833,13 @@ export const ConversationView = (props: ConversationViewProps) => {
           padding: 12px 16px;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           position: relative;
+          word-wrap: break-word;
+          word-break: break-word;
+          overflow-wrap: break-word;
         }
 
         .message.user .message-content {
-          background: #4f46e5;
+          background: #1A73E8;
           color: white;
           border-radius: 20px 20px 5px 20px;
         }
@@ -621,7 +872,7 @@ export const ConversationView = (props: ConversationViewProps) => {
           font-size: 11px;
           color: #9ca3af;
           text-align: right;
-          margin-top: 6px;
+          margin-top: 10px;
           font-weight: 500;
         }
 
@@ -650,8 +901,8 @@ export const ConversationView = (props: ConversationViewProps) => {
         }
 
         .suggestion-chip:hover {
-          background: #4f46e5;
-          border-color: #4f46e5;
+          background: #1A73E8;
+          border-color: #1A73E8;
           color: white;
           transform: translateY(-1px);
         }
@@ -666,24 +917,23 @@ export const ConversationView = (props: ConversationViewProps) => {
 
         .message-button {
           flex: 1;
-          background: #4f46e5;
+          background: #1A73E8;
           color: white;
           border: none;
           border-radius: 8px;
-          // padding: 10px 16px;
           font-size: 14px;
           font-weight: 500;
           cursor: pointer;
           transition: all 0.2s ease;
           text-align: center;
-          min-height: 40px;
+          min-height: 38px;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
         .message-button:hover {
-          background: #4338ca;
+          background: #1557B0;
         }
 
         .message-button:nth-child(2) {
@@ -737,7 +987,7 @@ export const ConversationView = (props: ConversationViewProps) => {
 
         .card-button {
           flex: 1;
-          background: #4f46e5;
+          background: #1A73E8;
           color: white;
           border: none;
           border-radius: 8px;
@@ -746,14 +996,14 @@ export const ConversationView = (props: ConversationViewProps) => {
           cursor: pointer;
           transition: all 0.2s ease;
           text-align: center;
-          min-height: 40px;
+          min-height: 38px;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
         .card-button:hover {
-          background: #4338ca;
+          background: #1557B0;
         }
 
         .card-button:nth-child(2) {
@@ -769,6 +1019,7 @@ export const ConversationView = (props: ConversationViewProps) => {
           max-width: 100%;
           overflow: hidden;
           margin-top: 8px;
+          position: relative;
         }
 
         .carousel-container {
@@ -776,20 +1027,55 @@ export const ConversationView = (props: ConversationViewProps) => {
           gap: 12px;
           overflow-x: auto;
           padding: 4px 4px 12px 4px;
+          scroll-behavior: smooth;
+          -ms-overflow-style: none;  /* Hide scrollbar for IE and Edge */
+          scrollbar-width: none;  /* Hide scrollbar for Firefox */
         }
 
         .carousel-container::-webkit-scrollbar {
-          height: 6px;
+          display: none; /* Hide scrollbar for Chrome, Safari and Opera */
         }
 
-        .carousel-container::-webkit-scrollbar-track {
-          background: #f3f4f6;
-          border-radius: 3px;
+        .carousel-nav-button {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 40px;
+          height: 40px;
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid #e5e7eb;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          z-index: 2;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+          transition: all 0.2s ease;
         }
 
-        .carousel-container::-webkit-scrollbar-thumb {
-          background: #d1d5db;
-          border-radius: 3px;
+        .carousel-nav-button:hover {
+          background: white;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .carousel-nav-button.prev {
+          left: 0;
+        }
+
+        .carousel-nav-button.next {
+          right: 0;
+        }
+
+        .carousel-nav-button svg {
+          width: 20px;
+          height: 20px;
+          color: #374151;
+        }
+
+        .carousel-nav-button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         .carousel-card {
@@ -837,11 +1123,11 @@ export const ConversationView = (props: ConversationViewProps) => {
 
         .carousel-card-button {
           flex: 1;
-          background: #4f46e5;
+          background: #1A73E8;
           color: white;
           border: none;
           border-radius: 6px;
-          padding: 8px 12px;
+          padding: 12px;
           font-size: 13px;
           font-weight: 500;
           cursor: pointer;
@@ -854,7 +1140,7 @@ export const ConversationView = (props: ConversationViewProps) => {
         }
 
         .carousel-card-button:hover {
-          background: #4338ca;
+          background: #1557B0;
         }
 
         .input-container {
@@ -879,7 +1165,7 @@ export const ConversationView = (props: ConversationViewProps) => {
 
         .message-input:focus {
           outline: none;
-          border-color: #4f46e5;
+          border-color: #1A73E8;
           background: white;
         }
 
@@ -893,7 +1179,7 @@ export const ConversationView = (props: ConversationViewProps) => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #4f46e5;
+          background: #1A73E8;
           border: none;
           border-radius: 50%;
           cursor: pointer;
@@ -902,7 +1188,7 @@ export const ConversationView = (props: ConversationViewProps) => {
         }
 
         .send-button:hover {
-          background: #4338ca;
+          background: #1557B0;
           transform: scale(1.05);
         }
 
@@ -936,6 +1222,37 @@ export const ConversationView = (props: ConversationViewProps) => {
         .emoji-button svg {
           width: 18px;
           height: 18px;
+        }
+
+        .latest-messages-button {
+          position: absolute;
+          top: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #1A73E8;
+          color: white;
+          border: none;
+          border-radius: 20px;
+          padding: 8px 16px;
+          font-size: 14px;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          z-index: 10;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          transition: all 0.2s ease;
+        }
+
+        .latest-messages-button:hover {
+          background: #1557B0;
+          transform: translateX(-50%) scale(1.05);
+        }
+
+        .latest-messages-button svg {
+          width: 16px;
+          height: 16px;
         }
 
         @media (max-width: 768px) {

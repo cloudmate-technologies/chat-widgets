@@ -114,6 +114,29 @@ export const getChatbotConfig = ({ chatflowid, apiHost = 'http://localhost:3000'
     onRequest: onRequest,
   });
 
+export const getChatbotConfigAutocampaign = async ({ chatflowid, apiHost = 'http://localhost:3000', onRequest }: MessageRequest): Promise<{ data?: any; error?: Error }> => {
+  try {
+    if (!chatflowid) {
+      throw new Error('Chatflow ID is required');
+    }
+
+    const response = await sendRequest<any>({
+      method: 'GET',
+      url: `${apiHost}/api/v1/chatbotConfig/${encodeURIComponent(chatflowid)}`,
+      onRequest: onRequest,
+    });
+
+    if (response.error) {
+      throw response.error;
+    }
+
+    return { data: response.data };
+  } catch (error) {
+    console.error('Error fetching chatbot config:', error);
+    return { error: error as Error };
+  }
+};
+
 export const isStreamAvailableQuery = ({ chatflowid, apiHost = 'http://localhost:3000', onRequest }: MessageRequest) =>
   sendRequest<any>({
     method: 'GET',

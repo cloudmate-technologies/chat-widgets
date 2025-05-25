@@ -73,6 +73,10 @@ export declare const getChatbotConfig: ({ chatflowid, apiHost, onRequest }: Mess
     data?: any;
     error?: Error | undefined;
 }>;
+export declare const getChatbotConfigAutocampaign: ({ chatflowid, apiHost, onRequest }: MessageRequest) => Promise<{
+    data?: any;
+    error?: Error;
+}>;
 export declare const isStreamAvailableQuery: ({ chatflowid, apiHost, onRequest }: MessageRequest) => Promise<{
     data?: any;
     error?: Error | undefined;

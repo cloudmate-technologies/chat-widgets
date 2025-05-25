@@ -10,5 +10,5 @@ export const registerWebComponents = () => {
   customElement('autocampaign-fullchatbot', defaultBotProps, Full);
   customElement('autocampaign-chatbot', defaultBotProps, Bubble);
   // @ts-expect-error prop types
-  customElement('autocampaign-chatwidget', { title: String, subtitle: String }, ChatWidget);
+  customElement('autocampaign-chatwidget', { chatflowid: String, apiHost: String, logo: String, title: String, subtitle: String, description: String }, ChatWidget);
 };

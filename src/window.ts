@@ -29,6 +29,14 @@ export const init = (props: BotProps) => {
   elementUsed = element;
 };
 
+export const initAutoCampaign = (props: BotProps) => {
+  destroy();
+  const element = document.createElement('autocampaign-chatwidget');
+  Object.assign(element, props);
+  document.body.appendChild(element);
+  elementUsed = element;
+};
+
 export const destroy = () => {
   elementUsed?.remove();
 };
@@ -36,6 +44,7 @@ export const destroy = () => {
 type Chatbot = {
   initFull: typeof initFull;
   init: typeof init;
+  initAutoCampaign: typeof initAutoCampaign;
   destroy: typeof destroy;
 };
 
@@ -48,6 +57,7 @@ declare const window:
 export const parseChatbot = () => ({
   initFull,
   init,
+  initAutoCampaign,
   destroy,
 });
 

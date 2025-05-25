@@ -8,3 +8,4 @@ export const defaultBotProps: BubbleProps = {
   theme: undefined,
   observersConfig: undefined,
 };
+

@@ -7,12 +7,18 @@ import {
   CloseIcon 
 } from './AgodifyIcons';
 import { ConversationView } from './ConversationView';
+import { getChatbotConfigAutocampaign } from '@/queries/sendMessageQuery';
 
 type ChatWidgetProps = {
+  chatflowid: string;
+  apiHost: string;
+  logo?: string;
   title?: string;
   subtitle?: string;
+  description?: string;
   onClose?: () => void;
 }
+
 
 export const ChatWidget = (props: ChatWidgetProps) => {
   // Always start closed on fresh page load
@@ -20,6 +26,16 @@ export const ChatWidget = (props: ChatWidgetProps) => {
   const [activeView, setActiveView] = createSignal<'menu' | 'conversation'>('menu');
   const [userInitiatedClose, setUserInitiatedClose] = createSignal(false);
   const [isFirstLoad, setIsFirstLoad] = createSignal(true);
+  const [chatbotConfig,setChatbotConfig] = createSignal<any>(null);
+  const [leadFormCompleted, setLeadFormCompleted] = createSignal(false);
+
+  // Check if lead form is completed on mount
+  onMount(() => {
+    const leadFormData = localStorage.getItem('leadFormData');
+    if (leadFormData) {
+      setLeadFormCompleted(true);
+    }
+  });
 
   // Persist state changes to localStorage, but only after first user interaction
   const persistState = (isExpanded: boolean, view: 'menu' | 'conversation') => {
@@ -40,8 +56,18 @@ export const ChatWidget = (props: ChatWidgetProps) => {
     persistState(newState, activeView());
   };
 
-  const handleOptionClick = (view: 'menu' | 'conversation') => {
-    console.log('handleOptionClick', view);
+  const handleOptionClick = (view: 'menu' | 'conversation', e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // If lead form is not completed and leads feature is enabled, show conversation view with form
+    if (!leadFormCompleted() && chatbotConfig()?.leads?.status && view === 'conversation') {
+      setActiveView('conversation');
+      setIsFirstLoad(false);
+      persistState(expanded(), 'conversation');
+      return;
+    }
+    
     setActiveView(view);
     setIsFirstLoad(false);
     persistState(expanded(), view);
@@ -66,6 +92,174 @@ export const ChatWidget = (props: ChatWidgetProps) => {
       });
     }
   });
+
+  createEffect(() => {
+
+    interface LeadFormData {
+      name?: string;
+      email?: string;
+      phone?: string;
+      country?: string;
+      contactDate?: string;
+      companySize?: string;
+    }
+
+    const chatConfig = {
+      chatflowId: props.chatflowid,
+      features: {
+        conversations: true,
+        scheduleCall: true,
+        callAgent: false,
+        knowledgeBase: true
+      },
+      leads: {
+        status: true,
+        title: "Please provide your contact information",
+        name: true,
+        email: true,
+        phone: true,
+        successMessage: "Thank you for providing your information. Our team will contact you shortly.",
+        validation: {
+          name: {
+            required: true,
+            minLength: 2,
+            maxLength: 50
+          },
+          email: {
+            required: true,
+            pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+          },
+          phone: {
+            required: false,
+            pattern: /^([+]?[\s0-9]+)?(\d{3}|[(]?[0-9]+[)])?([-]?[\s]?[0-9])+$/
+          }
+        },
+        conditionalDisplay: {
+          name: true, // Always show name
+          email: true, // Always show email
+          phone: (formData: LeadFormData) => formData.country === "India" || formData.country === "USA", // Show phone only for India and USA
+        },
+        customFields: [
+          {
+            label: "Country",
+            type: "dropdown",
+            options: ["India", "USA", "UK", "Australia"],
+            required: true,
+            key: "country"
+          },
+          {
+            label: "Preferred Contact Date",
+            type: "calendar",
+            required: false,
+            key: "contactDate",
+            showWhen: (formData: LeadFormData) => formData.email && formData.email.length > 0 // Show only when email is provided
+          },
+          {
+            label: "Company Size",
+            type: "dropdown",
+            options: ["1-10", "11-50", "51-200", "201-1000", "1000+"],
+            required: false,
+            key: "companySize",
+            showWhen: (formData: LeadFormData) => formData.country === "USA" || formData.country === "UK" // Show only for USA and UK
+          }
+        ]
+      },
+      theme: {
+        apiHost: props.apiHost,
+        button: {
+          backgroundColor: "#3B81F6",
+          right: 20,
+          bottom: 20,
+          size: 48,
+          dragAndDrop: true,
+          iconColor: "white",
+          customIconSrc: "https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/google-messages.svg",
+          autoWindowOpen: {
+            autoOpen: true,
+            openDelay: 2,
+            autoOpenOnMobile: false
+          }
+        },
+        tooltip: {
+          showTooltip: true,
+          tooltipMessage: "Hi There 👋!",
+          tooltipBackgroundColor: "black",
+          tooltipTextColor: "white",
+          tooltipFontSize: 16
+        },
+        disclaimer: {
+          title: "Disclaimer",
+          message: 'By using this chatbot, you agree to the <a target="_blank" href="https://flowiseai.com/terms">Terms & Condition</a>',
+          textColor: "black",
+          buttonColor: "#3b82f6",
+          buttonText: "Start Chatting",
+          buttonTextColor: "white",
+          blurredBackgroundColor: "rgba(0, 0, 0, 0.4)",
+          backgroundColor: "white"
+        },
+        customCSS: "",
+        chatWindow: {
+          showTitle: true,
+          showAgentMessages: true,
+          title: "Auto campaign",
+          subtitle: "We are here to help you!",
+          description: "Get the best prices on 2,000,000+ properties, worldwide",
+          titleAvatarSrc: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHJ4PSI2IiBmaWxsPSJ3aGl0ZSIvPjxjaXJjbGUgY3g9IjgiIGN5PSIxMiIgcj0iMyIgZmlsbD0iI0ZGNDg0OCIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjMiIGZpbGw9IiNGRkEyMEIiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjEyIiByPSIzIiBmaWxsPSIjMDBDMTdDIi8+PC9zdmc+",
+          welcomeMessage: "Hello! This is custom welcome message",
+          errorMessage: "This is a custom error message",
+          backgroundColor: "#ffffff",
+          backgroundImage: "",
+          height: 700,
+          width: 400,
+          fontSize: 16,
+          starterPrompts: ["What is a bot?", "Who are you?"],
+          starterPromptFontSize: 15,
+          clearChatOnReload: false,
+          sourceDocsTitle: "Sources:",
+          renderHTML: true,
+          botMessage: {
+            backgroundColor: "#f7f8ff",
+            textColor: "#303235",
+            showAvatar: true,
+            avatarSrc: "https://raw.githubusercontent.com/zahidkhawaja/langchain-chat-nextjs/main/public/parroticon.png"
+          },
+          userMessage: {
+            backgroundColor: "#3B81F6",
+            textColor: "#ffffff",
+            showAvatar: true,
+            avatarSrc: "https://raw.githubusercontent.com/zahidkhawaja/langchain-chat-nextjs/main/public/usericon.png"
+          },
+          textInput: {
+            placeholder: "Type your question",
+            backgroundColor: "#ffffff",
+            textColor: "#303235",
+            sendButtonColor: "#3B81F6",
+            maxChars: 50,
+            maxCharsWarningMessage: "You exceeded the characters limit. Please input less than 50 characters.",
+            autoFocus: true,
+            sendMessageSound: true,
+            receiveMessageSound: true
+          },
+          feedback: {
+            color: "#303235"
+          },
+          dateTimeToggle: {
+            date: true,
+            time: true
+          },
+          footer: {
+            textColor: "#303235",
+            text: "Powered by",
+            company: "Flowise",
+            companyLink: "https://flowiseai.com"
+          }
+        }
+      }
+    }
+    setChatbotConfig(chatConfig);
+
+  },[props.chatflowid]);
+  
 
   // Prevent accidental cleanup
   onMount(() => {
@@ -103,17 +297,18 @@ export const ChatWidget = (props: ChatWidgetProps) => {
           <Show when={activeView() === 'menu'}>
             <div class="chat-widget-header">
               <div class="logo-container">
-                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHJ4PSI2IiBmaWxsPSJ3aGl0ZSIvPjxjaXJjbGUgY3g9IjgiIGN5PSIxMiIgcj0iMyIgZmlsbD0iI0ZGNDg0OCIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjMiIGZpbGw9IiNGRkEyMEIiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjEyIiByPSIzIiBmaWxsPSIjMDBDMTdDIi8+PC9zdmc+" alt="agodify logo" class="logo-img" />
+                <img src={props.logo} alt="agodify logo" class="logo-img" />
               </div>
               <h1 class="title">{props.title}</h1>
               <p class="subtitle">{props.subtitle}</p>
-              <p class="description">Get the best prices on 2,000,000+ properties, worldwide</p>
+              <p class="description">{props.description}</p>
             </div>
             
             <div class="chat-options">
-              <button class="chat-option" onClick={() => handleOptionClick('conversation')}>
-                <div class="option-icon conversation">
-                  <ChatIcon />
+              {chatbotConfig()?.features?.conversations && (
+                <button class="chat-option" onClick={(e) => handleOptionClick('conversation', e)}>
+                  <div class="option-icon conversation">
+                    <ChatIcon />
                 </div>
                 <div class="option-content">
                   <h3 class="option-title">Conversations</h3>
@@ -121,24 +316,28 @@ export const ChatWidget = (props: ChatWidgetProps) => {
                 </div>
                 <div class="option-action">
                   <span class="action-text">New message</span>
-                  <span class="action-arrow">›</span>
-                </div>
-              </button>
+                    <span class="action-arrow">›</span>
+                  </div>
+                </button>
+              )}
 
-              <button class="chat-option">
-                <div class="option-icon schedule">
-                  <CalendarIcon />
+              {chatbotConfig()?.features?.scheduleCall && ( 
+                <button class="chat-option">
+                  <div class="option-icon schedule">
+                    <CalendarIcon />
                 </div>
                 <div class="option-content">
                   <h3 class="option-title">Schedule a call</h3>
                   <p class="option-description">Can't talk right now? Book a slot directly</p>
                 </div>
                 <span class="action-arrow">›</span>
-              </button>
+                </button>
+              )}
 
-              <button class="chat-option">
-                <div class="option-icon call">
-                  <PhoneIcon />
+              {chatbotConfig()?.features?.callAgent && (
+                <button class="chat-option">
+                  <div class="option-icon call">
+                    <PhoneIcon />
                 </div>
                 <div class="option-content">
                   <h3 class="option-title">Call agent</h3>
@@ -146,26 +345,30 @@ export const ChatWidget = (props: ChatWidgetProps) => {
                 </div>
                 <span class="action-arrow">›</span>
               </button>
+              )}
 
-              <button class="chat-option">
-                <div class="option-icon knowledge">
-                  <BookIcon />
+              {chatbotConfig()?.features?.knowledgeBase && (
+                <button class="chat-option">
+                  <div class="option-icon knowledge">
+                    <BookIcon />
                 </div>
                 <div class="option-content">
                   <h3 class="option-title">Knowledge base</h3>
                   <p class="option-description">Find answers to the most FAQ</p>
                 </div>
-                <span class="action-arrow">›</span>
-              </button>
+                  <span class="action-arrow">›</span>
+                </button>
+              )}
             </div>
           </Show>
 
           <Show when={activeView() === 'conversation'}>
             <ConversationView 
               onClose={() => setActiveView('menu')}
-              conversationTitle="Chatwoot"
+              conversationTitle="Auto campaign"
               onUpdateTitle={(title) => {/* Handle title update */}}
               onMessageSent={(text) => {/* Handle message sent */}}
+              leadFormStatus={!leadFormCompleted() && chatbotConfig()?.leads?.status}
             />
           </Show>
         </div>
@@ -188,7 +391,7 @@ export const ChatWidget = (props: ChatWidgetProps) => {
         }
 
         .chat-widget-container {
-          width: 420px;
+          width: ${activeView() === 'conversation' ? '455px' : '420px'};
           background: white;
           border-radius: 20px;
           box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
