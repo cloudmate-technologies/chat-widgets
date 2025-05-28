@@ -578,7 +578,7 @@ export const ConversationView = (props: ConversationViewProps) => {
       <Show when={!showLeadForm() || !props.leadFormStatus}>
         <div class="messages-wrapper">
           {/* Latest Messages Button */}
-          <Show when={showLatestButton()}>
+          {/* <Show when={showLatestButton()}>
             <button 
               class="latest-messages-button"
               onClick={() => scrollToBottom('smooth', true)}
@@ -588,8 +588,7 @@ export const ConversationView = (props: ConversationViewProps) => {
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </button>
-          </Show>
-
+          </Show> */}
           <div 
             class="messages-container" 
             ref={messagesContainerRef}

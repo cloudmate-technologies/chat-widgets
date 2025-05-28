@@ -526,7 +526,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
       const { observeUserInput, observeLoading, observeMessages } = botProps.observersConfig;
       typeof observeUserInput === 'function' &&
         // eslint-disable-next-line solid/reactivity
-        createMemo(() => {
+  createMemo(() => {
           observeUserInput(userInput());
         });
       typeof observeLoading === 'function' &&
