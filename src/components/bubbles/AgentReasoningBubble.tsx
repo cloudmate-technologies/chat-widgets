@@ -26,7 +26,9 @@ export const AgentReasoningBubble = (props: Props) => {
 
   onMount(() => {
     if (botMessageEl) {
-      botMessageEl.innerHTML = Marked.parse(`**✅ ${props.agentName}** \n\n${props.agentMessage}`);
+      const agentMessageString = typeof props.agentMessage === 'string' ? props.agentMessage : JSON.stringify(props.agentMessage);
+      
+      botMessageEl.innerHTML = Marked.parse(`**✅ ${props.agentName}** \n\n${agentMessageString}`);
       botMessageEl.querySelectorAll('a').forEach((link) => {
         link.target = '_blank';
       });
@@ -65,9 +67,12 @@ export const AgentReasoningBubble = (props: Props) => {
       );
     } else {
       const src = item.data as string;
+      // Ensure src is always a string before parsing markdown
+      const srcString = typeof src === 'string' ? src : JSON.stringify(src);
+      
       return (
         <span
-          innerHTML={Marked.parse(src)}
+          innerHTML={Marked.parse(srcString)}
           class="prose"
           style={{
             'background-color': props.backgroundColor ?? defaultBackgroundColor,

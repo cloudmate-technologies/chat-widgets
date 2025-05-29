@@ -27,7 +27,10 @@ export const GuestBubble = (props: Props) => {
   // Callback ref to set innerHTML and apply text color to all Markdown elements
   const setUserMessageRef = (el: HTMLSpanElement) => {
     if (el) {
-      el.innerHTML = Marked.parse(props.message.message);
+      // Ensure message is always a string before parsing markdown
+      const messageString = typeof props.message.message === 'string' ? props.message.message : JSON.stringify(props.message.message);
+      
+      el.innerHTML = Marked.parse(messageString);
 
       // Apply textColor to all links, headings, and other markdown elements
       const textColor = props.textColor ?? defaultTextColor;

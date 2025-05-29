@@ -13,7 +13,8 @@
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,md,mdx}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,md,mdx}\"",
     "prepare": "husky install",
-    "start": "node server.js"
+    "start": "node server.js",
+    "addData": "node AddData.js"
   },
   "license": "MIT",
   "dependencies": {

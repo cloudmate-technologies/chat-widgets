@@ -67,8 +67,11 @@ export const BotBubble = (props: Props) => {
         // If parsing fails, use the original message
       }
 
+      // Ensure messageText is always a string before parsing markdown
+      const messageString = typeof messageText === 'string' ? messageText : JSON.stringify(messageText);
+
       // Parse markdown content
-      const htmlContent = Marked.parse(messageText);
+      const htmlContent = Marked.parse(messageString);
       el.innerHTML = htmlContent;
 
       // Style paragraphs and other elements
@@ -300,10 +303,13 @@ export const BotBubble = (props: Props) => {
 
     // Only render text content
     if (item.type !== 'png' && item.type !== 'jpeg' && item.type !== 'html') {
+      // Ensure item.data is always a string before parsing markdown
+      const dataString = typeof item.data === 'string' ? item.data : JSON.stringify(item.data);
+      
       return (
         <span
           ref={setArtifactRef}
-          innerHTML={Marked.parse(item.data as string)}
+          innerHTML={Marked.parse(dataString)}
           class="prose"
           style={{
             'background-color': props.backgroundColor ?? defaultBackgroundColor,
