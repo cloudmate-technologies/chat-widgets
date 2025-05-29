@@ -54,6 +54,27 @@ export const BotBubble = (props: Props) => {
   // Store a reference to the bot message element for the copyMessageToClipboard function
   const [botMessageElement, setBotMessageElement] = createSignal<HTMLElement | null>(null);
 
+  // Helper function to check if message has meaningful content
+  const hasValidMessageContent = () => {
+    if (!props.message.message) return false;
+    
+    let messageText = props.message.message;
+    try {
+      const parsedMessage = JSON.parse(messageText);
+      if (Array.isArray(parsedMessage) && parsedMessage.length > 0 && parsedMessage[0].output !== undefined) {
+        messageText = parsedMessage[0].output;
+      }
+    } catch (e) {
+      // If parsing fails, use the original message
+    }
+
+    // Ensure messageText is always a string
+    const messageString = typeof messageText === 'string' ? messageText : JSON.stringify(messageText);
+    
+    // Check if the message has meaningful content (not empty or just whitespace)
+    return messageString.trim().length > 0;
+  };
+
   const setBotMessageRef = (el: HTMLSpanElement) => {
     if (el) {
       // Handle message that might be in JSON array format
@@ -419,7 +440,7 @@ export const BotBubble = (props: Props) => {
               </For>
             </div>
           )}
-          {props.message.message && (
+          {hasValidMessageContent() && (
             <span
               ref={setBotMessageRef}
               class="px-4 py-2 ml-2 max-w-full chatbot-host-bubble prose"
@@ -499,7 +520,7 @@ export const BotBubble = (props: Props) => {
         )}
       </div>
       <div>
-        {props.chatFeedbackStatus && props.message.messageId && (
+        {props.chatFeedbackStatus && props.message.messageId && hasValidMessageContent() && (
           <>
             <div class={`flex items-center px-2 pb-2 ${props.showAvatar ? 'ml-10' : ''}`}>
               <CopyToClipboardButton feedbackColor={props.feedbackColor} onClick={() => copyMessageToClipboard()} />
