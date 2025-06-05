@@ -39,17 +39,75 @@ const defaultTextColor = '#303235';
 const defaultFontSize = 16;
 const defaultFeedbackColor = '#3B81F6';
 
+// Utility function to generate unique message ID
+const generateUniqueMessageId = (): string => {
+  // Method 1: Using crypto.randomUUID() if available (modern browsers)
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  
+  // Method 2: Fallback using timestamp + random string
+  const timestamp = Date.now().toString(36);
+  const randomPart = Math.random().toString(36).substring(2, 15);
+  return `msg_${timestamp}_${randomPart}`;
+};
+
+// Utility functions for localStorage feedback management
+const getFeedbackFromStorage = (chatflowid: string, messageId: string): FeedbackRatingType | '' => {
+  try {
+    const feedbackKey = `feedback_${chatflowid}_${messageId}`;
+    const storedFeedback = localStorage.getItem(feedbackKey);
+    return storedFeedback as FeedbackRatingType || '';
+  } catch (e) {
+    console.warn('Failed to get feedback from localStorage:', e);
+    return '';
+  }
+};
+
+const saveFeedbackToStorage = (chatflowid: string, messageId: string, rating: FeedbackRatingType) => {
+  try {
+    const feedbackKey = `feedback_${chatflowid}_${messageId}`;
+    localStorage.setItem(feedbackKey, rating);
+  } catch (e) {
+    console.warn('Failed to save feedback to localStorage:', e);
+  }
+};
+
+const removeFeedbackFromStorage = (chatflowid: string, messageId: string) => {
+  try {
+    const feedbackKey = `feedback_${chatflowid}_${messageId}`;
+    localStorage.removeItem(feedbackKey);
+  } catch (e) {
+    console.warn('Failed to remove feedback from localStorage:', e);
+  }
+};
+
 export const BotBubble = (props: Props) => {
   let botDetailsEl: HTMLDetailsElement | undefined;
-
   Marked.setOptions({ isNoP: true, sanitize: props.renderHTML !== undefined ? !props.renderHTML : true });
 
-  const [rating, setRating] = createSignal('');
+  // Generate unique messageId if not provided
+  const effectiveMessageId = props.message.messageId || generateUniqueMessageId();
+
+  // Initialize rating from localStorage or message prop
+  const initialRating = getFeedbackFromStorage(props.chatflowid, effectiveMessageId) || props.message.rating || '';
+  
+  const [rating, setRating] = createSignal(initialRating);
   const [feedbackId, setFeedbackId] = createSignal('');
   const [showFeedbackContentDialog, setShowFeedbackContentModal] = createSignal(false);
   const [copiedMessage, setCopiedMessage] = createSignal(false);
-  const [thumbsUpColor, setThumbsUpColor] = createSignal(props.feedbackColor ?? defaultFeedbackColor); // default color
-  const [thumbsDownColor, setThumbsDownColor] = createSignal(props.feedbackColor ?? defaultFeedbackColor); // default color
+  
+  // Initialize colors based on stored rating
+  const getInitialThumbsUpColor = () => {
+    return initialRating === 'THUMBS_UP' ? '#006400' : (props.feedbackColor ?? defaultFeedbackColor);
+  };
+  
+  const getInitialThumbsDownColor = () => {
+    return initialRating === 'THUMBS_DOWN' ? '#8B0000' : (props.feedbackColor ?? defaultFeedbackColor);
+  };
+
+  const [thumbsUpColor, setThumbsUpColor] = createSignal(getInitialThumbsUpColor());
+  const [thumbsDownColor, setThumbsDownColor] = createSignal(getInitialThumbsDownColor());
 
   // Store a reference to the bot message element for the copyMessageToClipboard function
   const [botMessageElement, setBotMessageElement] = createSignal<HTMLElement | null>(null);
@@ -75,6 +133,60 @@ export const BotBubble = (props: Props) => {
     return messageString.trim().length > 0;
   };
 
+  // Pre-process message to fix common formatting issues
+  const preprocessMessageForLinks = (messageText: string): string => {
+    let processedText = messageText;
+    
+    // Fix missing opening bracket: **Title](link)** -> **[Title](link)**
+    processedText = processedText.replace(/\*\*([^[\]]+)\]\(([^)]+)\)\*\*/g, '**[$1]($2)**');
+    
+    // Fix other common markdown link issues
+    // Handle cases where there might be extra spaces
+    processedText = processedText.replace(/\*\*\s*\[([^\]]+)\]\s*\(([^)]+)\)\s*\*\*/g, '**[$1]($2)**');
+    
+    return processedText;
+  };
+
+  // Enhanced function to process markdown and make titles clickable
+  const processMarkdownWithClickableLinks = (messageText: string): string => {
+    // First parse the markdown
+    let htmlContent = Marked.parse(messageText);
+    
+    // Pattern 1: Handle **[Title](link)** format (proper markdown)
+    const linkPattern1 = /\*\*\[([^\]]+)\]\(([^)]+)\)\*\*/g;
+    htmlContent = htmlContent.replace(linkPattern1, (match, title, url) => {
+      return `<strong><a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #3B81F6; text-decoration: none; cursor: pointer; border-bottom: 1px solid #3B81F6;">${title}</a></strong>`;
+    });
+
+    // Pattern 2: Handle **Title](link)** format (missing opening bracket - common typo)
+    const linkPattern2 = /\*\*([^\]]+)\]\(([^)]+)\)\*\*/g;
+    htmlContent = htmlContent.replace(linkPattern2, (match, title, url) => {
+      return `<strong><a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #3B81F6; text-decoration: none; cursor: pointer; border-bottom: 1px solid #3B81F6;">${title}</a></strong>`;
+    });
+
+    // Pattern 3: Handle regular [Title](link) format without bold
+    const linkPattern3 = /\[([^\]]+)\]\(([^)]+)\)/g;
+    htmlContent = htmlContent.replace(linkPattern3, (match, title, url) => {
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #3B81F6; text-decoration: none; cursor: pointer; border-bottom: 1px solid #3B81F6;">${title}</a>`;
+    });
+
+    // Pattern 4: Handle cases where markdown parser already converted to HTML with strong tags
+    const strongLinkPattern = /<strong><a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a><\/strong>/g;
+    htmlContent = htmlContent.replace(strongLinkPattern, (match, url, title) => {
+      return `<strong><a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #3B81F6; text-decoration: none; cursor: pointer; border-bottom: 1px solid #3B81F6;">${title}</a></strong>`;
+    });
+
+    // Pattern 5: Handle plain links that might not have been processed
+    const plainLinkPattern = /<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g;
+    htmlContent = htmlContent.replace(plainLinkPattern, (match, url, title) => {
+      // Skip if already processed (has our styling)
+      if (match.includes('target="_blank"')) return match;
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #3B81F6; text-decoration: none; cursor: pointer; border-bottom: 1px solid #3B81F6;">${title}</a>`;
+    });
+
+    return htmlContent;
+  };
+
   const setBotMessageRef = (el: HTMLSpanElement) => {
     if (el) {
       // Handle message that might be in JSON array format
@@ -91,8 +203,11 @@ export const BotBubble = (props: Props) => {
       // Ensure messageText is always a string before parsing markdown
       const messageString = typeof messageText === 'string' ? messageText : JSON.stringify(messageText);
 
-      // Parse markdown content
-      const htmlContent = Marked.parse(messageString);
+      // Pre-process message to fix common formatting issues
+      const preprocessedMessage = preprocessMessageForLinks(messageString);
+
+      // Parse markdown content with clickable links
+      const htmlContent = processMarkdownWithClickableLinks(preprocessedMessage);
       el.innerHTML = htmlContent;
 
       // Style paragraphs and other elements
@@ -104,17 +219,34 @@ export const BotBubble = (props: Props) => {
         styledElement.style.lineHeight = '1.5';
       });
 
+      // Enhanced hover effects for all links
+      el.querySelectorAll('a').forEach((link) => {
+        // Ensure all links open in new tab
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
+        
+        // Apply consistent styling if not already applied
+        if (!link.style.color) {
+          link.style.color = '#3B81F6';
+          link.style.textDecoration = 'none';
+          link.style.cursor = 'pointer';
+          link.style.borderBottom = '1px solid #3B81F6';
+        }
+        
+        // Add hover effects
+        link.addEventListener('mouseenter', () => {
+          link.style.textDecoration = 'underline';
+          link.style.opacity = '0.8';
+        });
+        link.addEventListener('mouseleave', () => {
+          link.style.textDecoration = 'none';
+          link.style.opacity = '1';
+        });
+      });
+
       // Store the element ref for the copy function
       setBotMessageElement(el);
 
-      if (props.message.rating) {
-        setRating(props.message.rating);
-        if (props.message.rating === 'THUMBS_UP') {
-          setThumbsUpColor('#006400');
-        } else if (props.message.rating === 'THUMBS_DOWN') {
-          setThumbsDownColor('#8B0000');
-        }
-      }
       if (props.fileAnnotations && props.fileAnnotations.length) {
         for (const annotations of props.fileAnnotations) {
           const button = document.createElement('button');
@@ -162,7 +294,7 @@ export const BotBubble = (props: Props) => {
       setCopiedMessage(true);
       setTimeout(() => {
         setCopiedMessage(false);
-      }, 2000); // Hide the message after 2 seconds
+      }, 2000);
     } catch (error) {
       console.error('Error copying to clipboard:', error);
     }
@@ -174,7 +306,8 @@ export const BotBubble = (props: Props) => {
     try {
       const parsedDetails = JSON.parse(chatDetails);
       const messages: MessageType[] = parsedDetails.chatHistory || [];
-      const message = messages.find((msg) => msg.messageId === props.message.messageId);
+      // Use effectiveMessageId for finding the message
+      const message = messages.find((msg) => msg.messageId === effectiveMessageId);
       if (!message) return;
       message.rating = rating;
       localStorage.setItem(`${props.chatflowid}_EXTERNAL`, JSON.stringify({ ...parsedDetails, chatHistory: messages }));
@@ -206,78 +339,57 @@ export const BotBubble = (props: Props) => {
     return newSourceDocuments;
   };
 
-  const onThumbsUpClick = async () => {
-    if (rating() === '') {
-      const body = {
-        chatflowid: props.chatflowid,
-        chatId: props.chatId,
-        messageId: props.message?.messageId as string,
-        rating: 'THUMBS_UP' as FeedbackRatingType,
-        content: '',
-      };
-      const result = await sendFeedbackQuery({
-        chatflowid: props.chatflowid,
-        apiHost: props.apiHost,
-        body,
-        onRequest: props.onRequest,
-      });
-
-      if (result.data) {
-        const data = result.data as any;
-        let id = '';
-        if (data && data.id) id = data.id;
-        setRating('THUMBS_UP');
-        setFeedbackId(id);
-        setShowFeedbackContentModal(true);
-        // update the thumbs up color state
-        setThumbsUpColor('#006400');
-        saveToLocalStorage('THUMBS_UP');
-      }
+  // Modified thumbs up click handler - local only
+  const onThumbsUpClick = () => {
+    const currentRating = rating();
+    
+    if (currentRating === 'THUMBS_UP') {
+      // If already thumbs up, remove the rating (toggle off)
+      setRating('');
+      setThumbsUpColor(props.feedbackColor ?? defaultFeedbackColor);
+    } else {
+      // Set thumbs up rating
+      setRating('THUMBS_UP');
+      setThumbsUpColor('#006400');
+      setThumbsDownColor(props.feedbackColor ?? defaultFeedbackColor); // Reset thumbs down color
     }
   };
 
-  const onThumbsDownClick = async () => {
-    if (rating() === '') {
-      const body = {
-        chatflowid: props.chatflowid,
-        chatId: props.chatId,
-        messageId: props.message?.messageId as string,
-        rating: 'THUMBS_DOWN' as FeedbackRatingType,
-        content: '',
-      };
-      const result = await sendFeedbackQuery({
-        chatflowid: props.chatflowid,
-        apiHost: props.apiHost,
-        body,
-        onRequest: props.onRequest,
-      });
-
-      if (result.data) {
-        const data = result.data as any;
-        let id = '';
-        if (data && data.id) id = data.id;
-        setRating('THUMBS_DOWN');
-        setFeedbackId(id);
-        setShowFeedbackContentModal(true);
-        // update the thumbs down color state
-        setThumbsDownColor('#8B0000');
-        saveToLocalStorage('THUMBS_DOWN');
-      }
+  // Modified thumbs down click handler - local only
+  const onThumbsDownClick = () => {
+    const currentRating = rating();
+    
+    if (currentRating === 'THUMBS_DOWN') {
+      // If already thumbs down, remove the rating (toggle off)
+      setRating('');
+      setThumbsDownColor(props.feedbackColor ?? defaultFeedbackColor);
+    } else {
+      // Set thumbs down rating
+      setRating('THUMBS_DOWN');
+      setThumbsDownColor('#8B0000');
+      setThumbsUpColor(props.feedbackColor ?? defaultFeedbackColor); // Reset thumbs up color
     }
   };
 
   const submitFeedbackContent = async (text: string) => {
-    const body = {
-      content: text,
-    };
-    const result = await updateFeedbackQuery({
-      id: feedbackId(),
-      apiHost: props.apiHost,
-      body,
-      onRequest: props.onRequest,
-    });
+    try {
+      const body = {
+        content: text,
+      };
+      const result = await updateFeedbackQuery({
+        id: feedbackId(),
+        apiHost: props.apiHost,
+        body,
+        onRequest: props.onRequest,
+      });
 
-    if (result.data) {
+      if (result.data) {
+        setFeedbackId('');
+        setShowFeedbackContentModal(false);
+      }
+    } catch (error) {
+      console.error('Error updating feedback content:', error);
+      // Close dialog even if update fails
       setFeedbackId('');
       setShowFeedbackContentModal(false);
     }
@@ -298,10 +410,10 @@ export const BotBubble = (props: Props) => {
   });
 
   const renderArtifacts = (item: Partial<FileUpload>) => {
-    // Only render text content
     const setArtifactRef = (el: HTMLSpanElement) => {
       if (el) {
         const textColor = props.textColor ?? defaultTextColor;
+        
         // Apply textColor to text elements
         el.querySelectorAll('h1, h2, h3, h4, h5, h6, strong, em, blockquote, li, p').forEach((element) => {
           (element as HTMLElement).style.color = textColor;
@@ -319,18 +431,40 @@ export const BotBubble = (props: Props) => {
         el.querySelectorAll('code:not(pre code)').forEach((element) => {
           (element as HTMLElement).style.color = '#4CAF50';
         });
+
+        // Process clickable links in artifacts too
+        el.querySelectorAll('a').forEach((link) => {
+          link.setAttribute('target', '_blank');
+          link.setAttribute('rel', 'noopener noreferrer');
+          link.style.color = '#3B81F6';
+          link.style.textDecoration = 'none';
+          link.style.cursor = 'pointer';
+          link.style.borderBottom = '1px solid #3B81F6';
+          
+          link.addEventListener('mouseenter', () => {
+            link.style.textDecoration = 'underline';
+            link.style.opacity = '0.8';
+          });
+          link.addEventListener('mouseleave', () => {
+            link.style.textDecoration = 'none';
+            link.style.opacity = '1';
+          });
+        });
       }
     };
 
     // Only render text content
     if (item.type !== 'png' && item.type !== 'jpeg' && item.type !== 'html') {
-      // Ensure item.data is always a string before parsing markdown
       const dataString = typeof item.data === 'string' ? item.data : JSON.stringify(item.data);
+      
+      // Process the artifact data for clickable links
+      const preprocessedData = preprocessMessageForLinks(dataString);
+      const processedData = processMarkdownWithClickableLinks(preprocessedData);
       
       return (
         <span
           ref={setArtifactRef}
-          innerHTML={Marked.parse(dataString)}
+          innerHTML={processedData}
           class="prose"
           style={{
             'background-color': props.backgroundColor ?? defaultBackgroundColor,
@@ -350,7 +484,6 @@ export const BotBubble = (props: Props) => {
     try {
       const date = new Date(dateTimeString);
 
-      // Check if the date is valid
       if (isNaN(date.getTime())) {
         console.error('Invalid ISO date string:', dateTimeString);
         return '';
@@ -519,10 +652,11 @@ export const BotBubble = (props: Props) => {
           </>
         )}
       </div>
+      {/* Enhanced feedback section that works for all messages including agent responses */}
       <div>
-        {props.chatFeedbackStatus && props.message.messageId && hasValidMessageContent() && (
+        {props.chatFeedbackStatus && effectiveMessageId && hasValidMessageContent() && (
           <>
-            <div class={`flex items-center px-2 pb-2 ${props.showAvatar ? 'ml-10' : ''}`}>
+            <div class={`flex items-center px-2 pb-2 justify-conent-end ${props.showAvatar ? 'ml-10' : ''}`}>
               <CopyToClipboardButton feedbackColor={props.feedbackColor} onClick={() => copyMessageToClipboard()} />
               <Show when={copiedMessage()}>
                 <div class="copied-message" style={{ color: props.feedbackColor ?? defaultFeedbackColor }}>

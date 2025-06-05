@@ -3,9 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   sendMessageQuery,
   upsertVectorStoreWithFormData,
-  // isStreamAvailableQuery,
   IncomingInput,
-  // getChatbotConfig,
   FeedbackRatingType,
   createAttachmentWithFormData,
 } from '@/queries/sendMessageQuery';
@@ -186,7 +184,7 @@ export type LeadsConfig = {
 };
 
 // const defaultWelcomeMessage = 'Hi there! How can I help?';
-const defaultWelcomeMessage = 'Hi there! How can gifto help you?';
+const defaultWelcomeMessage = 'Hi there! How can Gifto help you?';
 /*const sourceDocuments = [
     {
         "pageContent": "I know some are talking about "living with COVID-19". Tonight – I say that we will never just accept living with COVID-19. \r\n\r\nWe will continue to combat the virus as we do other diseases. And because this is a virus that mutates and spreads, we will stay on guard. \r\n\r\nHere are four common sense steps as we move forward safely.  \r\n\r\nFirst, stay protected with vaccines and treatments. We know how incredibly effective vaccines are. If you're vaccinated and boosted you have the highest degree of protection. \r\n\r\nWe will never give up on vaccinating more Americans. Now, I know parents with kids under 5 are eager to see a vaccine authorized for their children. \r\n\r\nThe scientists are working hard to get that done and we'll be ready with plenty of vaccines when they do. \r\n\r\nWe're also ready with anti-viral treatments. If you get COVID-19, the Pfizer pill reduces your chances of ending up in the hospital by 90%.",
@@ -1267,7 +1265,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
         chatMessage?.chatHistory?.length > 0
           ? chatMessage.chatHistory?.map((message: MessageType) => {
               const chatHistory: MessageType = {
-                messageId: message?.messageId,
+                messageId: message?.id,
                 message: message.message,
                 type: message.type,
                 rating: message.rating,
@@ -1294,7 +1292,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
       setMessages([...filteredMessages]);
     }
 
-    // Determine if particular chatflow is available for streaming
+    // // Determine if particular chatflow is available for streaming
     // const { data } = await isStreamAvailableQuery({
     //   chatflowid: props.chatflowid,
     //   apiHost: props.apiHost,
@@ -1312,102 +1310,29 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     //   onRequest: props.onRequest,
     // });
 
-    // if (result.data) {
-    //   const chatbotConfig = result.data;
 
-    //   if (chatbotConfig.flowData) {
-    //     const nodes = JSON.parse(chatbotConfig.flowData).nodes ?? [];
-    //     const startNode = nodes.find((node: any) => node.data.name === 'startAgentflow');
-    //     if (startNode) {
-    //       const startInputType = startNode.data.inputs?.startInputType;
-    //       setStartInputType(startInputType);
+    const result =  { data : {"leads":{"status":false,"name":true,"email":true,"phone":true,"successMessage":"THanks you for submitting","title":"Let us know, how can we reach out ?"},"chatFeedback":{"status":true},"uploads":{"isSpeechToTextEnabled":false,"isImageUploadAllowed":false,"isRAGFileUploadAllowed":false,"imgUploadSizeAndTypes":[],"fileUploadSizeAndTypes":[]}} }
 
-    //       const formInputTypes = startNode.data.inputs?.formInputTypes;
-    //       /* example:
-    //       "formInputTypes": [
-    //           {
-    //             "type": "string",
-    //             "label": "From",
-    //             "name": "from",
-    //             "addOptions": ""
-    //           },
-    //           {
-    //             "type": "number",
-    //             "label": "Subject",
-    //             "name": "subject",
-    //             "addOptions": ""
-    //           },
-    //           {
-    //             "type": "boolean",
-    //             "label": "Body",
-    //             "name": "body",
-    //             "addOptions": ""
-    //           },
-    //           {
-    //             "type": "options",
-    //             "label": "Choices",
-    //             "name": "choices",
-    //             "addOptions": [
-    //               {
-    //                 "option": "choice 1"
-    //               },
-    //               {
-    //                 "option": "choice 2"
-    //               }
-    //             ]
-    //           }
-    //         ]
-    //       */
-    //       if (startInputType === 'formInput' && formInputTypes && formInputTypes.length > 0) {
-    //         for (const formInputType of formInputTypes) {
-    //           if (formInputType.type === 'options') {
-    //             formInputType.options = formInputType.addOptions.map((option: any) => ({
-    //               label: option.option,
-    //               name: option.option,
-    //             }));
-    //           }
-    //         }
-    //         setFormInputParams(formInputTypes);
-    //         setFormTitle(startNode.data.inputs?.formTitle);
-    //         setFormDescription(startNode.data.inputs?.formDescription);
-    //       }
-    //     }
-    //   }
-
-    //   if ((!props.starterPrompts || props.starterPrompts?.length === 0) && chatbotConfig.starterPrompts) {
-    //     const prompts: string[] = [];
-    //     Object.getOwnPropertyNames(chatbotConfig.starterPrompts).forEach((key) => {
-    //       prompts.push(chatbotConfig.starterPrompts[key].prompt);
-    //     });
-    //     setStarterPrompts(prompts.filter((prompt) => prompt !== ''));
-    //   }
-    //   if (chatbotConfig.chatFeedback) {
-    //     const chatFeedbackStatus = chatbotConfig.chatFeedback.status;
-    //     setChatFeedbackStatus(chatFeedbackStatus);
-    //   }
-    //   if (chatbotConfig.uploads) {
-    //     setUploadsConfig(chatbotConfig.uploads);
-    //   }
-    //   if (chatbotConfig.leads) {
-    //     setLeadsConfig(chatbotConfig.leads);
-    //     if (chatbotConfig.leads?.status && !getLocalStorageChatflow(props.chatflowid)?.lead) {
-    //       setMessages((prevMessages) => [...prevMessages, { message: '', type: 'leadCaptureMessage' }]);
-    //     }
-    //   }
-    //   if (chatbotConfig.followUpPrompts) {
-    //     setFollowUpPromptsStatus(chatbotConfig.followUpPrompts.status);
-    //   }
-    //   if (chatbotConfig.fullFileUpload) {
-    //     setFullFileUpload(chatbotConfig.fullFileUpload.status);
-    //     if (chatbotConfig.fullFileUpload?.allowedUploadFileTypes) {
-    //       setFullFileUploadAllowedTypes(chatbotConfig.fullFileUpload?.allowedUploadFileTypes);
-    //     }
-    //   }
-    // }
+    if (result.data) {
+      const chatbotConfig = result.data;
+      if (chatbotConfig?.chatFeedback) {
+        const chatFeedbackStatus = chatbotConfig?.chatFeedback?.status ?? true;
+        setChatFeedbackStatus(chatFeedbackStatus);
+      }
+      if (chatbotConfig?.uploads) {
+        setUploadsConfig(chatbotConfig?.uploads);
+      }
+      if (chatbotConfig?.leads) {
+        setLeadsConfig(chatbotConfig?.leads);
+        if (chatbotConfig?.leads?.status && !getLocalStorageChatflow(props.chatflowid)?.lead) {
+          setMessages((prevMessages) => [...prevMessages, { message: '', type: 'leadCaptureMessage' }]);
+        }
+      }
+    }
 
     // eslint-disable-next-line solid/reactivity
     return () => {
-      setUserInput('');
+      setUserInput(''); 
       setUploadedFiles([]);
       setLoading(false);
       setMessages([
@@ -1835,6 +1760,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
                         />
                       )}
                       {message.type === 'apiMessage' && (
+
                         <BotBubble
                           message={message}
                           fileAnnotations={message.fileAnnotations}
