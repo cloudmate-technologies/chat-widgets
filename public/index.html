@@ -1,0 +1,53 @@
+<!--
+  NOTE: This .html file (and public folder) is optional and can be safely deleted.
+  It serves only as a demo/test page.
+  
+  The chatbot can be embedded directly on any allowed domain using the embed script that
+  is generated when starting the server.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gifto Chatbot Widget</title>
+</head>
+
+<body>
+    <div id="root"></div>
+    <autocampaign-fullchatbot></autocampaign-fullchatbot>
+    <script type="module">
+        import Chatbot from "./web.js"
+        // import Chatbot from "https://cdn.jsdelivr.net/gh/cloudmate-technologies/chat-widgets@feat/agent-flow/dist/web.js";
+    
+        // Initialize chatbot with popup functionality
+        Chatbot.initFull({
+          // TODO: change to the correct chatflow id
+          chatflowid: "support_agent",
+          // TODO: change to the correct webhook url
+          apiHost:
+            "https://primary-production-1ed5e.up.railway.app/webhook/619dd051-9dbb-470f-8a29-1aace2491c5a",
+    
+          // TODO: change to the correct theme
+          theme: {
+            chatWindow: {
+              showTitle: true,
+              title: "AI Assistant",
+              backgroundColor: "#ffffff",
+              fontSize: 16,
+              welcomeMessage: "Hi there! How can Gifto help you ? 😊",
+              footer: {
+                textColor: "#303235",
+                text: "Powered by",
+                company: "Gifto",
+                companyLink: "https://www.gifto.co",
+              },
+            },
+          },
+        });
+      </script>
+</body>
+
+</html>
