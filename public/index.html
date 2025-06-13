@@ -17,37 +17,51 @@
 
 <body>
     <div id="root"></div>
-    <autocampaign-fullchatbot></autocampaign-fullchatbot>
+    <!-- CSS to center the chatbot window in the middle of the page -->
+    <style>
+      .chatWindow {
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        margin: 0 !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important; /* Add shadow */
+      }
+    </style>
+    <autocampaign-fullchatbot class="chatWindow"></autocampaign-fullchatbot> 
     <script type="module">
-        import Chatbot from "./web.js"
-        // import Chatbot from "https://cdn.jsdelivr.net/gh/cloudmate-technologies/chat-widgets@feat/agent-flow/dist/web.js";
+        // import Chatbot from "./web.js"
+        import Chatbot from "https://cdn.jsdelivr.net/gh/cloudmate-technologies/chat-widgets@feat/agent-flow/dist/web.js?v=2";
     
         // Initialize chatbot with popup functionality
         Chatbot.initFull({
           // TODO: change to the correct chatflow id
           chatflowid: "support_agent",
           // TODO: change to the correct webhook url
-          apiHost:
-            "https://primary-production-1ed5e.up.railway.app/webhook/619dd051-9dbb-470f-8a29-1aace2491c5a",
-    
-          // TODO: change to the correct theme
+          apiHost:"https://giftoai.app.n8n.cloud/webhook/619dd051-9dbb-470f-8a29-1aace2491c5a",
+            
+          // Theme configuration - controls the appearance and behavior of the chatbot window
           theme: {
             chatWindow: {
-              showTitle: true,
-              title: "AI Assistant",
-              backgroundColor: "#ffffff",
-              fontSize: 16,
-              welcomeMessage: "Hi there! How can Gifto help you ? 😊",
+              showTitle: true, // hide show title of chat window
+              title: "AI Assistant", // change title of chat window
+              backgroundColor: "#ffffff", // change background color of chat window
+              fontSize: 16, // change font size of chat window
+              height: 900, // change height of chat window
+              width: 1400, // change width of chat window   
+              welcomeMessage: "Hi there! How can Gifto help you ? 😊", // change welcome message of chat window
               footer: {
-                textColor: "#303235",
-                text: "Powered by",
-                company: "Gifto",
-                companyLink: "https://www.gifto.co",
+                textColor: "#303235", // change text color of footer
+                text: "Powered by", // change text of footer
+                company: "Gifto", // change company of footer
+                companyLink: "https://www.gifto.co", // change company link of footer
               },
             },
           },
         });
-      </script>
+    </script>
 </body>
 
 </html>
+
+
