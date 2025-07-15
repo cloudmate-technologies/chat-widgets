@@ -18,48 +18,61 @@
 <body>
     <div id="root"></div>
     <!-- CSS to center the chatbot window in the middle of the page -->
-    <style>
+    <!-- <style>
       .chatWindow {
         position: fixed !important;
         top: 50% !important;
         left: 50% !important;
         transform: translate(-50%, -50%) !important;
-        margin: 0 !important;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important; /* Add shadow */
-      }
-    </style>
-    <autocampaign-fullchatbot class="chatWindow"></autocampaign-fullchatbot> 
-    <script type="module">
-        // import Chatbot from "./web.js"
-        import Chatbot from "https://cdn.jsdelivr.net/gh/cloudmate-technologies/chat-widgets@feat/agent-flow/dist/web.js?v=2";
     
-        // Initialize chatbot with popup functionality
-        Chatbot.initFull({
-          // TODO: change to the correct chatflow id
-          chatflowid: "support_agent",
-          // TODO: change to the correct webhook url
-          apiHost:"https://giftoai.app.n8n.cloud/webhook/619dd051-9dbb-470f-8a29-1aace2491c5a",
-            
-          // Theme configuration - controls the appearance and behavior of the chatbot window
-          theme: {
-            chatWindow: {
-              showTitle: true, // hide show title of chat window
-              title: "AI Assistant", // change title of chat window
-              backgroundColor: "#ffffff", // change background color of chat window
-              fontSize: 16, // change font size of chat window
-              height: 900, // change height of chat window
-              width: 1400, // change width of chat window   
-              welcomeMessage: "Hi there! How can Gifto help you ? 😊", // change welcome message of chat window
-              footer: {
-                textColor: "#303235", // change text color of footer
-                text: "Powered by", // change text of footer
-                company: "Gifto", // change company of footer
-                companyLink: "https://www.gifto.co", // change company link of footer
-              },
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    
+        margin: 0 !important;
+        padding: 0;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
+    
+        /* Allow auto-resize if screen is smaller */
+        max-width: 100vw;
+        max-height: 100vh;
+        box-sizing: border-box;
+      }
+  
+    </style> -->
+    <!-- chatbot code -->
+    <autocampaign-chatbot></autocampaign-chatbot>
+
+    <script type="module">
+      // import Chatbot from "https://cdn.jsdelivr.net/gh/csyndicate/giftobot@main/dist/web.js";
+      import Chatbot from "./web.js";
+    
+      Chatbot.init({
+        chatflowid: "support_agent", // You chatflowid here
+        apiHost: "https://automation.voicenova.ai/webhook/619dd051-9dbb-470f-8a29-1aace2491c5a", // You api host
+        theme: {
+          chatWindow: {
+            showTitle: true, // hide or show title
+            title: "Ecom Assistant", // change chat window title
+            backgroundColor: "#ffffff", // change chat window background color
+            fontSize: 16, // change chat window font size
+    
+            // 👇 Default fixed size (for desktops)
+            // width: 1000, // change chat window width
+            // height: 600, // change chat window height
+    
+            welcomeMessage: "Hi there! How can I help you ? 😊", // change chat window welcome message
+            footer: {
+              textColor: "#303235", // change footer text color
+              text: "Powered by", // change footer text
+              company: "Voicenova", // change footer company name
+              companyLink: "https://www.voicenova.ai", // change footer company link
             },
           },
-        });
+        },
+      });
     </script>
+    
 </body>
 
 </html>
