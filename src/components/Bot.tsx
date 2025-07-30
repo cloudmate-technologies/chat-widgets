@@ -511,10 +511,15 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
   const [followUpPromptsStatus, setFollowUpPromptsStatus] = createSignal<boolean>(false);
   const [followUpPrompts, setFollowUpPrompts] = createSignal<string[]>([]);
 
+  // suggestions from bot responses
+  const [suggestions, setSuggestions] = createSignal<string[]>([]);
+
   // drag & drop
   const [isDragActive, setIsDragActive] = createSignal(false);
   const [uploadedFiles, setUploadedFiles] = createSignal<{ file: File; type: string }[]>([]);
   const [fullFileUploadAllowedTypes, setFullFileUploadAllowedTypes] = createSignal('*');
+
+  const [hasMoreData, setHasMoreData] = createSignal(false);
 
   createMemo(() => {
     const customerId = (props.chatflowConfig?.vars as any)?.customerId;
@@ -858,6 +863,17 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
             closeResponse();
             break;
           case 'end':
+            // Process the complete message for suggestions when streaming ends
+            setMessages((prevMessages) => {
+              const allMessages = [...cloneDeep(prevMessages)];
+              if (allMessages.length > 0 && allMessages[allMessages.length - 1].type === 'apiMessage') {
+                const lastMessage = allMessages[allMessages.length - 1];
+                const processedMessage = handleSuggestionsFromResponse(lastMessage.message);
+                allMessages[allMessages.length - 1].message = processedMessage;
+                addChatMessage(allMessages);
+              }
+              return allMessages;
+            });
             setLocalStorageChatflow(chatflowid, chatId);
             closeResponse();
             break;
@@ -976,6 +992,9 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
 
   // Handle form submission
   const handleSubmit = async (value: string | object, action?: IAction | undefined | null, humanInput?: any) => {
+    // Always clear suggestions and hasMoreData when a message is sent
+    setSuggestions([]);
+    setHasMoreData(false);
     if (typeof value === 'string' && value.trim() === '') {
       const containsFile = previews().filter((item) => !item.mime.startsWith('image') && item.type !== 'audio').length > 0;
       if (!previews().length || (previews().length && containsFile)) {
@@ -1055,6 +1074,9 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
         if (data.text) text = data.text;
         else if (data.json) text = JSON.stringify(data.json, null, 2);
         else text = JSON.stringify(data, null, 2);
+        
+        // Process text for suggestions and get the response text to display
+        text = handleSuggestionsFromResponse(text);
 
         if (data?.chatId) setChatId(data.chatId);
 
@@ -1176,6 +1198,37 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     }
   };
 
+  const suggestionClick = (suggestion: string) => {
+    setSuggestions([]); // Always clear suggestions
+    setHasMoreData(false); // Always clear hasMoreData to hide the chip
+    if (suggestion === '__SHOW_MORE__') {
+      handleSubmit('Show more');
+    } else {
+      handleSubmit(suggestion);
+    }
+  };
+
+  const handleSuggestionsFromResponse = (messageText: string) => {
+    try {
+      const parsedResponse = JSON.parse(messageText);
+      // Check if the response is an array with the expected format
+      if (Array.isArray(parsedResponse) && parsedResponse.length > 0) {
+        const firstResponse = parsedResponse[0];
+        // Extract suggestions if they exist
+        if (firstResponse.suggestions && Array.isArray(firstResponse.suggestions)) {
+          setSuggestions(firstResponse.suggestions);
+        }
+        setHasMoreData(!!firstResponse.hasMoreData);
+        return firstResponse.response || messageText;
+      }
+    } catch (error) {
+      // If parsing fails, return the original message
+      console.log('Message is not in expected JSON format, using as-is');
+    }
+    setHasMoreData(false);
+    return messageText;
+  };
+
   const clearChat = () => {
     try {
       removeLocalStorageChatHistory(props.chatflowid);
@@ -1183,6 +1236,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
         (props.chatflowConfig?.vars as any)?.customerId ? `${(props.chatflowConfig?.vars as any).customerId.toString()}+${uuidv4()}` : uuidv4(),
       );
       setUploadedFiles([]);
+      setSuggestions([]); // Clear suggestions when chat is cleared
       const messages: MessageType[] = [
         {
           message: props.welcomeMessage ?? defaultWelcomeMessage,
@@ -1846,6 +1900,31 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
                   </div>
                 </>
               </Show>
+            </Show>
+            <Show when={suggestions().length > 0 || hasMoreData()}>
+              <>
+                <div class="flex items-center gap-1 px-5">
+                  <SparklesIcon class="w-4 h-4" />
+                  <span class="text-sm text-gray-700">Suggestions</span>
+                </div>
+                <div class="w-full flex flex-row flex-wrap px-5 py-[10px] gap-2">
+                  <For each={(() => {
+                    const chips = [...suggestions()];
+                    if (hasMoreData()) {
+                      chips.unshift('__SHOW_MORE__');
+                    }
+                    return chips;
+                  })()}>
+                    {(suggestion, index) => (
+                      <FollowUpPromptBubble
+                        prompt={suggestion === '__SHOW_MORE__' ? 'Show more' : suggestion}
+                        onPromptClick={() => suggestionClick(suggestion)}
+                        starterPromptFontSize={botProps.starterPromptFontSize}
+                      />
+                    )}
+                  </For>
+                </div>
+              </>
             </Show>
             <Show when={previews().length > 0}>
               <div class="w-full flex items-center justify-start gap-2 px-5 pt-2 border-t border-[#eeeeee]">

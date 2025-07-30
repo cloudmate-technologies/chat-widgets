@@ -193,11 +193,24 @@ export const BotBubble = (props: Props) => {
       let messageText = props.message.message;
       try {
         const parsedMessage = JSON.parse(messageText);
-        if (Array.isArray(parsedMessage) && parsedMessage.length > 0 && parsedMessage[0].output) {
-          messageText = parsedMessage[0].output;
+        
+        // Check if the response is in the new format: array with response and suggestions
+        if (Array.isArray(parsedMessage) && parsedMessage.length > 0 && parsedMessage[0].response) {
+          messageText = parsedMessage[0].response;
+        } else if (parsedMessage.output) {
+          // Handle existing format where message is wrapped in an array with output field
+          messageText = parsedMessage.output;
         }
       } catch (e) {
-        // If parsing fails, use the original message
+        // If parsing fails, check if it's an array format without JSON parsing
+        try {
+          const parsedArray = JSON.parse(messageText);
+          if (Array.isArray(parsedArray) && parsedArray.length > 0 && parsedArray[0].output) {
+            messageText = parsedArray[0].output;
+          }
+        } catch (e2) {
+          // If all parsing fails, use the original message
+        }
       }
 
       // Ensure messageText is always a string before parsing markdown
