@@ -1864,17 +1864,51 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
                   );
                 }}
               </For>
+              
+              {/* Show suggestions after the last AI response - this will scroll with the conversation */}
+              <Show when={suggestions().length > 0 || hasMoreData()}>
+                <>
+                  <div class="flex items-center gap-1 px-0 pt-2">
+                    <SparklesIcon class="w-4 h-4" />
+                    <span class="text-sm text-gray-700">Suggestions</span>
+                  </div>
+                  <div class="w-full flex flex-row flex-wrap px-0 py-[10px] gap-2 items-start">
+                    <For each={(() => {
+                      const chips = [...suggestions()];
+                      if (hasMoreData()) {
+                        chips.unshift('__SHOW_MORE__');
+                      }
+                      return chips;
+                    })()}>
+                      {(suggestion, index) => (
+                        <div class="flex-shrink-0 max-w-full" style="flex-basis: auto; min-width: 0;">
+                          <FollowUpPromptBubble
+                            prompt={suggestion === '__SHOW_MORE__' ? 'Show more' : suggestion}
+                            onPromptClick={() => suggestionClick(suggestion)}
+                            starterPromptFontSize={botProps.starterPromptFontSize}
+                          />
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                </>
+              </Show>
+              
+              {/* Bottom spacer to ensure proper spacing at the end of conversation */}
+              <div class="h-4"></div>
             </div>
             <Show when={messages().length === 1}>
               <Show when={starterPrompts().length > 0}>
-                <div class="w-full flex flex-row flex-wrap px-5 py-[10px] gap-2">
+                <div class="w-full flex flex-row flex-wrap px-5 py-[10px] gap-2 items-start">
                   <For each={[...starterPrompts()]}>
                     {(key) => (
-                      <StarterPromptBubble
-                        prompt={key}
-                        onPromptClick={() => promptClick(key)}
-                        starterPromptFontSize={botProps.starterPromptFontSize} // Pass it here as a number
-                      />
+                      <div class="flex-shrink-0 max-w-full" style="flex-basis: auto; min-width: 0;">
+                        <StarterPromptBubble
+                          prompt={key}
+                          onPromptClick={() => promptClick(key)}
+                          starterPromptFontSize={botProps.starterPromptFontSize} // Pass it here as a number
+                        />
+                      </div>
                     )}
                   </For>
                 </div>
@@ -1887,45 +1921,23 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
                     <SparklesIcon class="w-4 h-4" />
                     <span class="text-sm text-gray-700">Try these prompts</span>
                   </div>
-                  <div class="w-full flex flex-row flex-wrap px-5 py-[10px] gap-2">
+                  <div class="w-full flex flex-row flex-wrap px-5 py-[10px] gap-2 items-start">
                     <For each={[...followUpPrompts()]}>
                       {(prompt, index) => (
-                        <FollowUpPromptBubble
-                          prompt={prompt}
-                          onPromptClick={() => followUpPromptClick(prompt)}
-                          starterPromptFontSize={botProps.starterPromptFontSize} // Pass it here as a number
-                        />
+                        <div class="flex-shrink-0 max-w-full" style="flex-basis: auto; min-width: 0;">
+                          <FollowUpPromptBubble
+                            prompt={prompt}
+                            onPromptClick={() => followUpPromptClick(prompt)}
+                            starterPromptFontSize={botProps.starterPromptFontSize} // Pass it here as a number
+                          />
+                        </div>
                       )}
                     </For>
                   </div>
                 </>
               </Show>
             </Show>
-            <Show when={suggestions().length > 0 || hasMoreData()}>
-              <>
-                <div class="flex items-center gap-1 px-5">
-                  <SparklesIcon class="w-4 h-4" />
-                  <span class="text-sm text-gray-700">Suggestions</span>
-                </div>
-                <div class="w-full flex flex-row flex-wrap px-5 py-[10px] gap-2">
-                  <For each={(() => {
-                    const chips = [...suggestions()];
-                    if (hasMoreData()) {
-                      chips.unshift('__SHOW_MORE__');
-                    }
-                    return chips;
-                  })()}>
-                    {(suggestion, index) => (
-                      <FollowUpPromptBubble
-                        prompt={suggestion === '__SHOW_MORE__' ? 'Show more' : suggestion}
-                        onPromptClick={() => suggestionClick(suggestion)}
-                        starterPromptFontSize={botProps.starterPromptFontSize}
-                      />
-                    )}
-                  </For>
-                </div>
-              </>
-            </Show>
+
             <Show when={previews().length > 0}>
               <div class="w-full flex items-center justify-start gap-2 px-5 pt-2 border-t border-[#eeeeee]">
                 <For each={[...previews()]}>{(item) => <>{previewDisplay(item)}</>}</For>
