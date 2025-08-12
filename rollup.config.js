@@ -10,7 +10,6 @@ import { typescriptPaths } from 'rollup-plugin-typescript-paths';
 import commonjs from '@rollup/plugin-commonjs';
 import { uglify } from 'rollup-plugin-uglify';
 import serve from 'rollup-plugin-serve';
-import livereload from 'rollup-plugin-livereload';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -48,10 +47,9 @@ const indexConfig = {
             contentBase: ['dist', 'public'],
             host: 'localhost',
             port: 5678,
-          }),
-          livereload({ watch: 'dist' }),
+          })
         ]
-      : []), // Add serve/livereload only in development
+      : []),
   ],
 };
 
