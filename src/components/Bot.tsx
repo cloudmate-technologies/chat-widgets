@@ -1200,12 +1200,8 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
 
   const suggestionClick = (suggestion: string) => {
     setSuggestions([]); // Always clear suggestions
-    setHasMoreData(false); // Always clear hasMoreData to hide the chip
-    if (suggestion === '__SHOW_MORE__') {
-      handleSubmit('Show more');
-    } else {
-      handleSubmit(suggestion);
-    }
+    setHasMoreData(false); // Always clear hasMoreData
+    handleSubmit(suggestion);
   };
 
   const handleSuggestionsFromResponse = (messageText: string) => {
@@ -1866,24 +1862,18 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
               </For>
               
               {/* Show suggestions after the last AI response - this will scroll with the conversation */}
-              <Show when={suggestions().length > 0 || hasMoreData()}>
+              <Show when={suggestions().length > 0}>
                 <>
                   <div class="flex items-center gap-1 px-0 pt-2">
                     <SparklesIcon class="w-4 h-4" />
                     <span class="text-sm text-gray-700">Suggestions</span>
                   </div>
                   <div class="w-full flex flex-row flex-wrap px-0 py-[10px] gap-2 items-start">
-                    <For each={(() => {
-                      const chips = [...suggestions()];
-                      if (hasMoreData()) {
-                        chips.unshift('__SHOW_MORE__');
-                      }
-                      return chips;
-                    })()}>
+                    <For each={suggestions()}>
                       {(suggestion, index) => (
                         <div class="flex-shrink-0 max-w-full" style="flex-basis: auto; min-width: 0;">
                           <FollowUpPromptBubble
-                            prompt={suggestion === '__SHOW_MORE__' ? 'Show more' : suggestion}
+                            prompt={suggestion}
                             onPromptClick={() => suggestionClick(suggestion)}
                             starterPromptFontSize={botProps.starterPromptFontSize}
                           />

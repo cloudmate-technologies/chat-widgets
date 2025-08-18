@@ -69,10 +69,27 @@ export const AgentReasoningBubble = (props: Props) => {
       const src = item.data as string;
       // Ensure src is always a string before parsing markdown
       const srcString = typeof src === 'string' ? src : JSON.stringify(src);
-      
+
+      // Enhance: render discount badges for patterns like "23.5% OFF"
+      const discountBadgeStyle = [
+        'margin-left:1px',
+        'padding:2px 8px',
+        'background-color:#F0FDF4',
+        'color:#166534',
+        'border:1px solid #86EFAC',
+        'border-radius:9999px',
+        'font-weight:600',
+        'font-size:0.85em',
+        'white-space:nowrap',
+      ].join(';');
+      const discountPattern = /(\s[-–]\s*)(\d+(?:\.\d+)?)%\s*OFF/gi;
+      const processedHtml = Marked.parse(srcString).replace(discountPattern, (_m, _s, num) => {
+        return ` <span class="discount-badge" style="${discountBadgeStyle}">${num}% OFF</span>`;
+      });
+
       return (
         <span
-          innerHTML={Marked.parse(srcString)}
+          innerHTML={processedHtml}
           class="prose"
           style={{
             'background-color': props.backgroundColor ?? defaultBackgroundColor,

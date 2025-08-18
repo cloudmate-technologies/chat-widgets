@@ -184,6 +184,25 @@ export const BotBubble = (props: Props) => {
       return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #3B81F6; text-decoration: none; cursor: pointer; border-bottom: 1px solid #3B81F6;">${title}</a>`;
     });
 
+    // Pattern 6: Detect and convert "- 23.5% OFF" (or "– 23.5% OFF") fragments into inline badges
+    // We replace the preceding hyphen separator with a styled span badge.
+    const discountBadgeStyle = [
+      'margin-left:1px',
+      'padding:2px 8px',
+      'background-color:#F0FDF4', // light green background
+      'color:#166534',            // dark green text
+      'border:1px solid #86EFAC', // green border
+      'border-radius:9999px',
+      'font-weight:600',
+      'font-size:0.85em',
+      'white-space:nowrap',
+    ].join(';');
+
+    const discountPattern = /(\s[-–]\s*)(\d+(?:\.\d+)?)%\s*OFF/gi;
+    htmlContent = htmlContent.replace(discountPattern, (_match, _sep, num) => {
+      return ` <span class="discount-badge" style="${discountBadgeStyle}">${num}% OFF</span>`;
+    });
+
     return htmlContent;
   };
 
@@ -461,6 +480,23 @@ export const BotBubble = (props: Props) => {
           link.addEventListener('mouseleave', () => {
             link.style.textDecoration = 'none';
             link.style.opacity = '1';
+          });
+        });
+
+        // Highlight standalone discount tokens like "23.5% OFF" that may appear without a preceding dash
+        const badgeNodes = el.querySelectorAll('*');
+        const discountRegex = /(\b)(\d+(?:\.\d+)?)%\s*OFF\b/gi;
+        const badgeStyle = 'display:inline-block;margin-left:6px;padding:2px 8px;background-color:#F0FDF4;color:#166534;border:1px solid #86EFAC;border-radius:9999px;font-weight:600;font-size:0.85em;white-space:nowrap;';
+        badgeNodes.forEach((node) => {
+          node.childNodes.forEach((child) => {
+            if (child.nodeType === Node.TEXT_NODE) {
+              const text = child.textContent || '';
+              if (discountRegex.test(text)) {
+                const span = document.createElement('span');
+                span.innerHTML = text.replace(discountRegex, (_m, _b, num) => ` <span class="discount-badge" style="${badgeStyle}">${num}% OFF</span>`);
+                node.replaceChild(span, child);
+              }
+            }
           });
         });
       }
