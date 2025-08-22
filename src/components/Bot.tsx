@@ -458,6 +458,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
   let chatContainer: HTMLDivElement | undefined;
   let bottomSpacer: HTMLDivElement | undefined;
   let botContainer: HTMLDivElement | undefined;
+  
 
   const [userInput, setUserInput] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -546,17 +547,9 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
         });
     }
 
-    if (!bottomSpacer) return;
-    setTimeout(() => {
-      chatContainer?.scrollTo(0, chatContainer.scrollHeight);
-    }, 50);
   });
 
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      chatContainer?.scrollTo(0, chatContainer.scrollHeight);
-    }, 50);
-  };
+  
 
   /**
    * Add each chat message into localStorage
@@ -731,7 +724,6 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     setLoading(false);
     setUserInput('');
     setUploadedFiles([]);
-    scrollToBottom();
   };
 
   const handleDisclaimerAccept = () => {
@@ -895,9 +887,6 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     setUserInput('');
     setUploadedFiles([]);
     hasSoundPlayed = false;
-    setTimeout(() => {
-      scrollToBottom();
-    }, 100);
   };
 
   const abortMessage = () => {
@@ -1011,7 +1000,6 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     }
 
     setLoading(true);
-    scrollToBottom();
 
     let uploads: IUploads = previews().map((item) => {
       return {
@@ -1108,7 +1096,6 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
         setLoading(false);
         setUserInput('');
         setUploadedFiles([]);
-        scrollToBottom();
       }
       if (result.error) {
         const error = result.error;
@@ -1276,16 +1263,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
     }
   });
 
-  // Auto scroll chat to bottom
-  createEffect(() => {
-    if (messages()) {
-      if (messages().length > 1) {
-        setTimeout(() => {
-          chatContainer?.scrollTo(0, chatContainer.scrollHeight);
-        }, 400);
-      }
-    }
-  });
+  
 
   createEffect(() => {
     if (props.fontSize && botContainer) botContainer.style.fontSize = `${props.fontSize}px`;
@@ -1789,12 +1767,12 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
           <div class="flex flex-col w-full h-full justify-start z-0">
             <div
               ref={chatContainer}
-              class="overflow-y-scroll flex flex-col flex-grow min-w-full w-full px-3 pt-[70px] relative scrollable-container chatbot-chat-view scroll-smooth"
+              class="overflow-y-scroll flex flex-col flex-grow min-w-full w-full px-3 pt-[70px] relative scrollable-container chatbot-chat-view"
             >
               <For each={[...messages()]}>
                 {(message, index) => {
                   return (
-                    <>
+                    <div>
                       {message.type === 'userMessage' && (
                         <GuestBubble
                           message={message}
@@ -1810,7 +1788,6 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
                         />
                       )}
                       {message.type === 'apiMessage' && (
-
                         <BotBubble
                           message={message}
                           fileAnnotations={message.fileAnnotations}
@@ -1856,7 +1833,7 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
                       )}
                       {message.type === 'userMessage' && loading() && index() === messages().length - 1 && <LoadingBubble />}
                       {message.type === 'apiMessage' && message.message === '' && loading() && index() === messages().length - 1 && <LoadingBubble />}
-                    </>
+                    </div>
                   );
                 }}
               </For>

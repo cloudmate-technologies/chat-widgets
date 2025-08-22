@@ -76,6 +76,8 @@ pre {
 .scrollable-container {
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
+  overscroll-behavior: contain; /* prevent parent scroll / bounce */
+  overflow-anchor: none; /* disable browser auto scroll anchoring */
 }
 
 .text-fade-in {
