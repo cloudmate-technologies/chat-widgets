@@ -185,6 +185,13 @@ export type LeadsConfig = {
 
 // const defaultWelcomeMessage = 'Hi there! How can I help?';
 const defaultWelcomeMessage = 'Hi there! How can Gifto help you?';
+
+// A helper function to count words in a string
+const countWords = (str: string) => {
+  if (!str) return 0;
+  // This splits the string by any whitespace and returns the number of words
+  return str.trim().split(/\s+/).length;
+};
 /*const sourceDocuments = [
     {
         "pageContent": "I know some are talking about "living with COVID-19". Tonight – I say that we will never just accept living with COVID-19. \r\n\r\nWe will continue to combat the virus as we do other diseases. And because this is a virus that mutates and spreads, we will stay on guard. \r\n\r\nHere are four common sense steps as we move forward safely.  \r\n\r\nFirst, stay protected with vaccines and treatments. We know how incredibly effective vaccines are. If you're vaccinated and boosted you have the highest degree of protection. \r\n\r\nWe will never give up on vaccinating more Americans. Now, I know parents with kids under 5 are eager to see a vaccine authorized for their children. \r\n\r\nThe scientists are working hard to get that done and we'll be ready with plenty of vaccines when they do. \r\n\r\nWe're also ready with anti-viral treatments. If you get COVID-19, the Pfizer pill reduces your chances of ending up in the hospital by 90%.",
@@ -462,6 +469,18 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
 
   const [userInput, setUserInput] = createSignal('');
   const [loading, setLoading] = createSignal(false);
+
+  // Helper function to scroll chat to bottom
+  const scrollToBottom = () => {
+    if (chatContainer) {
+      // Use setTimeout to ensure DOM is updated before scrolling
+      setTimeout(() => {
+        if (chatContainer) {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+      }, 0);
+    }
+  };
   const [sourcePopupOpen, setSourcePopupOpen] = createSignal(false);
   const [sourcePopupSrc, setSourcePopupSrc] = createSignal({});
   const [messages, setMessages] = createSignal<MessageType[]>(
@@ -1025,6 +1044,9 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
       return messages;
     });
 
+    // Scroll to bottom when user sends a message
+    scrollToBottom();
+
     const body: IncomingInput = {
       chatInput: value,
       sessionId: chatId(),
@@ -1091,6 +1113,9 @@ export const Bot = (botProps: BotProps & { class?: string }) => {
           return allMessages;
         });
 
+        if (countWords(text) < 60) {
+            scrollToBottom();
+        }
         updateMetadata(data, value);
 
         setLoading(false);
